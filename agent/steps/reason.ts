@@ -3,6 +3,7 @@ import { reasonDemoSuffix } from "../demoMode.js";
 import { callLLMJson } from "../llmJson.js";
 import { reasonOutSchema, type ReasonOut } from "../schemas.js";
 import type { RepairState } from "../state.js";
+import { formatPerceptionBlock } from "./perception.js";
 
 const SYSTEM = `You are a strategist for apologizing and repairing a relationship or workplace situation.
 Output one JSON object matching the schema.
@@ -26,7 +27,8 @@ export async function reasonStep(state: RepairState): Promise<RepairState> {
     throw new Error("reasonStep requires state.research");
   }
 
-  const user = `Original scenario:\n${state.input}\n\nResearch JSON:\n${JSON.stringify(state.research, null, 2)}\n\nProduce reason JSON (include incidentType, alibiPolicy, writingRules with 2–4 items).`;
+  const perceptionSection = formatPerceptionBlock(state);
+  const user = `Original scenario:\n${state.input}\n\n${perceptionSection ? `${perceptionSection}\n\n` : ""}Research JSON:\n${JSON.stringify(state.research, null, 2)}\n\nProduce reason JSON (include incidentType, alibiPolicy, writingRules with 2–4 items). If perception signals owed replies or long gaps, prefer contrite tone and higher stakes when appropriate.`;
 
   const reasoning: ReasonOut = await callLLMJson(
     reasonOutSchema,

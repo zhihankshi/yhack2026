@@ -83,8 +83,44 @@ PORT=3001
 
 ### Run backend
 ```bash
-node server.js
+cd backend && npx tsx server.js
 ```
+
+### Google OAuth + Gmail draft (hackathon-simple)
+
+Tokens are kept **in memory** on the server (one demo user); restart clears the session.
+
+**1. Env (in `backend/.env`)**
+```
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
+```
+
+**2. Google Cloud Console**
+- Create a project → **APIs & Services** → enable **Gmail API**.
+- **OAuth consent screen** (External / Test users as needed).
+- **Credentials** → **OAuth 2.0 Client ID** → Application type **Web application**.
+- **Authorized redirect URIs**: `http://localhost:3001/api/auth/google/callback` (must match `GOOGLE_REDIRECT_URI` exactly).
+
+**3. Connect**
+1. Start the backend, then open: `http://localhost:3001/api/auth/google/start`
+2. Complete Google consent; you should see: *Google connected — you can close this tab.*
+
+**4. Check status**
+```bash
+curl http://localhost:3001/api/auth/status
+```
+Expect `{ "ok": true, "connected": true }` after linking.
+
+**5. Create a draft (not send)**
+```bash
+curl -X POST http://localhost:3001/api/send-apology-email \
+  -H "Content-Type: application/json" \
+  -d '{"to":"you@gmail.com","subject":"Hello","body":"Draft body"}'
+```
+If not connected: `401` with `{ "ok": false, "error": "NOT_AUTHENTICATED" }`.  
+Omit `to` to draft to yourself (uses the signed-in Gmail address).
 
 ### Testing endpoints
 ```bash

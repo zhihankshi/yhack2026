@@ -47,6 +47,11 @@ export const config = {
     return envStr("MODEL_WRITE", "gpt-4o-mini");
   },
 
+  get maxTokensPerception(): number {
+    if (isDemoMode()) return 300;
+    return envInt("MAX_TOKENS_PERCEPTION", 450);
+  },
+
   get maxTokensResearch(): number {
     if (isDemoMode()) return 180;
     return envInt("MAX_TOKENS_RESEARCH", 400);
@@ -73,6 +78,7 @@ export function getModelConfigSummary(): {
   demoMode: boolean;
   modelFast: string;
   modelWrite: string;
+  maxTokensPerception: number;
   maxTokensResearch: number;
   maxTokensReason: number;
   maxTokensWrite: number;
@@ -82,6 +88,7 @@ export function getModelConfigSummary(): {
     demoMode: isDemoMode(),
     modelFast: config.modelFast,
     modelWrite: config.modelWrite,
+    maxTokensPerception: config.maxTokensPerception,
     maxTokensResearch: config.maxTokensResearch,
     maxTokensReason: config.maxTokensReason,
     maxTokensWrite: config.maxTokensWrite,
