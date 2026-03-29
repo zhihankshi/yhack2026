@@ -1,55 +1,35 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useTTS } from "./hooks/useTTS.js";
 import { GOLDEN_PATH_RESULT } from "./data/goldenPath.js";
-
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const T = {
-  bg: "#FAF3E4",
-  surface: "#F3E8D0",
-  white: "#FFFDF7",
-  text: "#1A0D05",
-  textMuted: "#7A5A38",
-  textFaint: "#B89870",
-  orange: "#D4591A",
-  orangeLight: "rgba(212,89,26,0.10)",
-  orangeBorder: "rgba(212,89,26,0.30)",
-  brown: "#8B4513",
-  brownLight: "rgba(139,69,19,0.08)",
-  amber: "#E8921A",
-  amberLight: "rgba(232,146,26,0.12)",
-  green: "#4A7A4A",
-  greenLight: "rgba(74,122,74,0.10)",
-  red: "#C43228",
-  redLight: "rgba(196,50,40,0.10)",
-  border: "rgba(139,69,19,0.14)",
-  borderMed: "rgba(139,69,19,0.24)",
-  shadow: "0 2px 10px rgba(26,13,5,0.07)",
-  shadowMd: "0 4px 20px rgba(26,13,5,0.10)",
-  radius: "12px",
-  radiusSm: "8px",
-  radiusLg: "16px",
-  radiusFull: "100px",
-};
+import { T } from "./lib/tokens.js";
+import { MarketingHome } from "./components/MarketingHome.jsx";
+import KnightScene from "./components/KnightScene.jsx";
+import GeneratingOverlay from "./components/GeneratingOverlay.jsx";
+import { LoadingCrest } from "./components/LoadingCrest.jsx";
 
 // ─── Agent Steps Metadata ─────────────────────────────────────────────────────
 const STEPS_META = {
   research_person: {
     label: "Profiling the situation",
     icon: "🔍",
-    color: T.orange,
+    color: T.gold,
   },
-  assess_damage: { label: "Assessing the damage", icon: "⚖️", color: T.amber },
+  assess_damage: {
+    label: "Assessing the damage",
+    icon: "⚖️",
+    color: T.crimson,
+  },
   build_alibi_narrative: {
     label: "Constructing the alibi",
     icon: "📜",
-    color: T.brown,
+    color: T.gold,
   },
-  draft_apology: { label: "Drafting the apology", icon: "✍️", color: T.orange },
+  draft_apology: { label: "Drafting the apology", icon: "✍️", color: T.gold },
   recommend_gift: {
     label: "Selecting the offering",
     icon: "🎁",
-    color: "#9B59B6",
+    color: T.purple,
   },
   schedule_followup: {
     label: "Scheduling the follow-up",
@@ -100,6 +80,14 @@ const GLOBAL_CSS = `
     from { opacity: 0; }
     to   { opacity: 1; }
   }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0);     }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
   @keyframes pulse {
     0%, 100% { opacity: 1; transform: scale(1);    }
     50%       { opacity: 0.45; transform: scale(0.72); }
@@ -116,16 +104,56 @@ const GLOBAL_CSS = `
     from { opacity: 0; transform: translateX(-6px); }
     to   { opacity: 1; transform: translateX(0);    }
   }
+  @keyframes gradientShift {
+    0%   { background-position: 0% 50%;   }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%;   }
+  }
+  @keyframes goldPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
+    50%       { box-shadow: 0 0 0 6px rgba(201,168,76,0.12); }
+  }
   *, *::before, *::after { box-sizing: border-box; }
-  input, select, textarea, button { font-family: 'Nunito', sans-serif; }
-  input::placeholder, textarea::placeholder { color: #B89870; }
-  select option { background: #F3E8D0; color: #1A0D05; }
-  ::-webkit-scrollbar { width: 5px; }
+  input, select, textarea, button { font-family: 'DM Sans', 'Nunito', sans-serif; }
+  input::placeholder, textarea::placeholder { color: #3E3828; }
+  select option { background: #1E1A0E; color: #F2E9D8; }
+  ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(139,69,19,0.22); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
+  /* Grain texture overlay */
+  .grain::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9997;
+    opacity: 0.038;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
 `;
 
-// ─── Utility ──────────────────────────────────────────────────────────────────
+// ─── Hover Card Wrapper ───────────────────────────────────────────────────────
+function HoverCard({ delay = "0s", children }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        filter: hovered ? "drop-shadow(0 12px 28px rgba(0,0,0,0.55))" : "none",
+        transition: "transform 0.22s ease, filter 0.22s ease",
+        animation: `fadeUp 0.4s ease ${delay} both`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
 async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
@@ -136,7 +164,7 @@ async function copyText(text) {
 }
 
 // ─── Micro-components ─────────────────────────────────────────────────────────
-function Spinner({ size = 16, color = T.orange }) {
+function Spinner({ size = 16, color = T.gold }) {
   return (
     <span
       style={{
@@ -153,7 +181,7 @@ function Spinner({ size = 16, color = T.orange }) {
   );
 }
 
-function PulsingDot({ color = T.orange }) {
+function PulsingDot({ color = T.gold }) {
   return (
     <span
       style={{
@@ -171,10 +199,14 @@ function PulsingDot({ color = T.orange }) {
 
 function SeverityBadge({ severity }) {
   const cfg = {
-    low: { bg: "#E8F4E8", color: "#2E7D32", label: "LOW RISK" },
-    medium: { bg: "#FFF8E1", color: "#E65100", label: "MODERATE" },
-    high: { bg: "#FFF0E0", color: T.orange, label: "HIGH RISK" },
-    critical: { bg: "#FFEBEE", color: T.red, label: "CRITICAL" },
+    low: { bg: "rgba(78,122,80,0.15)", color: "#6AAB6C", label: "LOW RISK" },
+    medium: { bg: "rgba(201,168,76,0.15)", color: T.gold, label: "MODERATE" },
+    high: { bg: "rgba(184,49,47,0.15)", color: "#D05050", label: "HIGH RISK" },
+    critical: {
+      bg: "rgba(184,49,47,0.22)",
+      color: T.crimson,
+      label: "CRITICAL",
+    },
   };
   const c = cfg[severity] || cfg.medium;
   return (
@@ -184,12 +216,13 @@ function SeverityBadge({ severity }) {
         alignItems: "center",
         background: c.bg,
         color: c.color,
-        border: `1.5px solid ${c.color}60`,
+        border: `1.5px solid ${c.color}50`,
         borderRadius: T.radiusFull,
         padding: "4px 14px",
-        fontSize: 11,
-        fontWeight: 800,
-        letterSpacing: "1.5px",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "2px",
+        fontFamily: T.fontBody,
       }}
     >
       {c.label}
@@ -199,9 +232,9 @@ function SeverityBadge({ severity }) {
 
 function Toast({ message, type = "error", onDismiss }) {
   const cfg = {
-    error: { bg: "#FFEBEE", border: T.red, color: T.red },
-    warning: { bg: "#FFF8E1", border: T.amber, color: "#7A4A00" },
-    success: { bg: "#E8F5E8", border: T.green, color: "#2E5E2E" },
+    error: { bg: "#1A0A08", border: T.crimson, color: "#D05050" },
+    warning: { bg: "#16140A", border: T.gold, color: T.gold },
+    success: { bg: "#0A160A", border: T.green, color: "#6AAB6C" },
   };
   const c = cfg[type] || cfg.error;
   return (
@@ -213,7 +246,7 @@ function Toast({ message, type = "error", onDismiss }) {
         zIndex: 9999,
         transform: "translateX(-50%)",
         background: c.bg,
-        border: `1.5px solid ${c.border}`,
+        border: `1.5px solid ${c.border}40`,
         borderRadius: T.radiusSm,
         padding: "12px 18px",
         display: "flex",
@@ -229,9 +262,10 @@ function Toast({ message, type = "error", onDismiss }) {
         style={{
           color: c.color,
           fontSize: 13,
-          fontWeight: 700,
+          fontWeight: 500,
           flex: 1,
           lineHeight: 1.4,
+          fontFamily: T.fontBody,
         }}
       >
         {message}
@@ -255,24 +289,25 @@ function Toast({ message, type = "error", onDismiss }) {
   );
 }
 
-// ─── Shared card styles ───────────────────────────────────────────────────────
+// ─── Shared Card Styles ───────────────────────────────────────────────────────
 const metaLabel = {
-  fontSize: 10,
-  fontWeight: 800,
-  color: T.textFaint,
-  letterSpacing: "1.5px",
+  fontSize: 9,
+  fontWeight: 600,
+  color: T.parchmentFaint,
+  letterSpacing: "2px",
   textTransform: "uppercase",
-  marginBottom: 4,
+  marginBottom: 5,
+  fontFamily: T.fontBody,
 };
 
 function cardWrap(accentColor) {
   return {
-    background: T.white,
-    border: `1.5px solid ${T.border}`,
-    borderLeft: `4px solid ${accentColor}`,
+    background: T.surface,
+    border: `1px solid ${T.border}`,
+    borderLeft: `3px solid ${accentColor}`,
     borderRadius: T.radiusSm,
     padding: "20px 24px",
-    marginBottom: 16,
+    marginBottom: 14,
     boxShadow: T.shadow,
   };
 }
@@ -291,13 +326,14 @@ function CardHead({ icon, title, color, children }) {
     >
       <h3
         style={{
-          fontSize: 16,
-          fontWeight: 800,
-          color: T.text,
+          fontSize: 15,
+          fontWeight: 600,
+          color: T.parchment,
           margin: 0,
           display: "flex",
           alignItems: "center",
           gap: 7,
+          fontFamily: T.fontBody,
         }}
       >
         <span>{icon}</span>
@@ -312,7 +348,7 @@ function CardHead({ icon, title, color, children }) {
   );
 }
 
-function ActionBtn({ onClick, disabled, color = T.orange, children }) {
+function ActionBtn({ onClick, disabled, color = T.gold, children }) {
   return (
     <button
       onClick={onClick}
@@ -322,14 +358,15 @@ function ActionBtn({ onClick, disabled, color = T.orange, children }) {
         alignItems: "center",
         gap: 6,
         background: `${color}12`,
-        border: `1.5px solid ${color}38`,
+        border: `1px solid ${color}30`,
         borderRadius: T.radiusSm,
         padding: "6px 14px",
         color,
-        fontWeight: 800,
+        fontWeight: 600,
         fontSize: 12,
+        fontFamily: T.fontBody,
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.6 : 1,
+        opacity: disabled ? 0.5 : 1,
         whiteSpace: "nowrap",
         transition: "all 0.15s ease",
       }}
@@ -347,15 +384,26 @@ function MetaPill({ label, value, color }) {
         alignItems: "center",
         gap: 5,
         background: `${color}10`,
-        border: `1px solid ${color}28`,
+        border: `1px solid ${color}25`,
         borderRadius: T.radiusFull,
         padding: "3px 11px",
       }}
     >
-      <span style={{ fontSize: 10, fontWeight: 700, color: T.textFaint }}>
+      <span
+        style={{
+          fontSize: 9,
+          fontWeight: 600,
+          color: T.parchmentFaint,
+          fontFamily: T.fontBody,
+        }}
+      >
         {label}:
       </span>
-      <span style={{ fontSize: 12, fontWeight: 800, color }}>{value}</span>
+      <span
+        style={{ fontSize: 11, fontWeight: 700, color, fontFamily: T.fontBody }}
+      >
+        {value}
+      </span>
     </span>
   );
 }
@@ -364,7 +412,7 @@ function MetaPill({ label, value, color }) {
 function ProgressPanel({ completedKeys, currentStep }) {
   const done = new Set(completedKeys);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {Object.entries(STEPS_META).map(([key, meta], i) => {
         const isDone = done.has(key);
         const isActive = currentStep === key;
@@ -376,88 +424,96 @@ function ProgressPanel({ completedKeys, currentStep }) {
               display: "flex",
               alignItems: "center",
               gap: 13,
-              padding: "11px 15px",
+              padding: "11px 16px",
               borderRadius: T.radiusSm,
               background: isActive
-                ? T.orangeLight
+                ? "rgba(201,168,76,0.07)"
                 : isDone
-                  ? T.greenLight
+                  ? "rgba(78,122,80,0.07)"
                   : "transparent",
-              border: `1.5px solid ${isActive ? T.orangeBorder : isDone ? "rgba(74,122,74,0.28)" : T.border}`,
-              opacity: isPending ? 0.4 : 1,
+              border: `1px solid ${isActive ? T.goldBorder : isDone ? "rgba(78,122,80,0.25)" : T.border}`,
+              opacity: isPending ? 0.35 : 1,
               transition: "all 0.3s ease",
               animation: isDone ? `stepIn 0.3s ease ${i * 0.04}s both` : "none",
             }}
           >
-            {/* Circle */}
             <div
               style={{
-                width: 33,
-                height: 33,
+                width: 32,
+                height: 32,
                 borderRadius: "50%",
                 flexShrink: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 background: isDone
-                  ? T.green
+                  ? "rgba(78,122,80,0.2)"
                   : isActive
-                    ? T.orangeLight
-                    : T.brownLight,
-                border: `2px solid ${isDone ? T.green : isActive ? T.orange : T.border}`,
-                fontSize: isDone ? 14 : 15,
-                color: isDone ? "#fff" : "inherit",
+                    ? T.goldLight
+                    : "rgba(242,233,216,0.04)",
+                border: `1.5px solid ${isDone ? T.green : isActive ? T.gold : T.border}`,
+                fontSize: isDone ? 13 : 15,
+                color: isDone ? T.green : "inherit",
                 transition: "all 0.3s ease",
               }}
             >
               {isDone ? (
                 "✓"
               ) : isActive ? (
-                <PulsingDot color={T.orange} />
+                <PulsingDot color={T.gold} />
               ) : (
                 <span
-                  style={{ fontSize: 11, fontWeight: 800, color: T.textFaint }}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: T.parchmentFaint,
+                    fontFamily: T.fontBody,
+                  }}
                 >
                   {i + 1}
                 </span>
               )}
             </div>
-            {/* Label */}
             <div style={{ flex: 1 }}>
               <div
                 style={{
-                  fontSize: 14,
-                  fontWeight: isDone || isActive ? 700 : 600,
-                  color: isDone ? T.green : isActive ? T.text : T.textMuted,
+                  fontSize: 13,
+                  fontWeight: isDone || isActive ? 600 : 400,
+                  color: isDone
+                    ? T.green
+                    : isActive
+                      ? T.parchment
+                      : T.parchmentDim,
+                  fontFamily: T.fontBody,
                 }}
               >
                 {meta.icon} {meta.label}
               </div>
             </div>
-            {/* Status tag */}
             {isActive && (
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 5,
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color: T.orange,
-                  letterSpacing: "1.5px",
+                  gap: 6,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: T.gold,
+                  letterSpacing: "2px",
+                  fontFamily: T.fontBody,
                 }}
               >
-                <Spinner size={11} color={T.orange} />
-                RUNNING
+                <Spinner size={10} color={T.gold} /> RUNNING
               </div>
             )}
             {isDone && (
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 800,
+                  fontSize: 9,
+                  fontWeight: 700,
                   color: T.green,
-                  letterSpacing: "1.5px",
+                  letterSpacing: "2px",
+                  fontFamily: T.fontBody,
                 }}
               >
                 DONE
@@ -470,31 +526,29 @@ function ProgressPanel({ completedKeys, currentStep }) {
   );
 }
 
-// ─── Alibi Card (TTS) ─────────────────────────────────────────────────────────
+// ─── Alibi Card (with TTS) ────────────────────────────────────────────────────
 function AlibiCard({ alibi }) {
   const [copied, setCopied] = useState(false);
   const { play, isLoading, isPlaying, hasAudio, error, clearError } = useTTS(
     alibi?.narrative,
   );
-
   const handleCopy = async () => {
     if (await copyText(alibi?.narrative || "")) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2200);
     }
   };
-
   return (
-    <div style={cardWrap(T.orange)}>
-      <CardHead icon="📜" title="The Alibi" color={T.orange}>
+    <div style={cardWrap(T.gold)}>
+      <CardHead icon="📜" title="The Alibi" color={T.gold}>
         <ActionBtn
           onClick={play}
           disabled={isLoading || !alibi?.narrative}
-          color={T.orange}
+          color={T.gold}
         >
           {isLoading ? (
             <>
-              <Spinner size={11} color={T.orange} /> Generating…
+              <Spinner size={11} color={T.gold} /> Generating…
             </>
           ) : isPlaying ? (
             "⏸ Pause"
@@ -504,57 +558,56 @@ function AlibiCard({ alibi }) {
             "▶ Play Aloud"
           )}
         </ActionBtn>
-        <ActionBtn onClick={handleCopy} color={T.brown}>
+        <ActionBtn onClick={handleCopy} color={T.parchmentDim}>
           {copied ? "✓ Copied" : "Copy"}
         </ActionBtn>
       </CardHead>
-
       <blockquote
         style={{
-          borderLeft: `3px solid ${T.orange}`,
+          borderLeft: `2px solid ${T.gold}50`,
           margin: "0 0 14px",
           paddingLeft: 16,
-          fontSize: 15,
+          fontSize: 14,
           fontStyle: "italic",
-          fontWeight: 600,
-          lineHeight: 1.75,
-          color: T.text,
+          fontWeight: 400,
+          lineHeight: 1.8,
+          color: T.parchment,
+          fontFamily: T.fontDisplay,
         }}
       >
         "{alibi?.narrative}"
       </blockquote>
-
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {alibi?.plausibility_score != null && (
           <MetaPill
             label="Plausibility"
             value={`${Math.round(alibi.plausibility_score * 100)}%`}
-            color={T.orange}
+            color={T.gold}
           />
         )}
         {alibi?.recommended_delivery && (
           <MetaPill
             label="Deliver"
             value={alibi.recommended_delivery}
-            color={T.brown}
+            color={T.parchmentDim}
           />
         )}
       </div>
-
       {error && (
         <div
           style={{
             marginTop: 12,
             padding: "9px 12px",
-            background: T.redLight,
-            border: `1px solid ${T.red}28`,
+            background: T.crimsonLight,
+            border: `1px solid ${T.crimson}28`,
             borderRadius: T.radiusSm,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             fontSize: 12,
-            fontWeight: 700,
-            color: T.red,
+            fontWeight: 500,
+            color: "#D05050",
+            fontFamily: T.fontBody,
           }}
         >
           <span>🔇 Audio unavailable — {error}</span>
@@ -563,7 +616,7 @@ function AlibiCard({ alibi }) {
             style={{
               background: "none",
               border: "none",
-              color: T.red,
+              color: "#D05050",
               fontSize: 16,
               cursor: "pointer",
             }}
@@ -585,29 +638,27 @@ function ApologyCard({ apology, onDraftEmail, emailLoading, emailDone }) {
     apology?.body || "",
     apology?.ps_line ? `\n${apology.ps_line}` : "",
   ].join("\n");
-
   const handleCopy = async () => {
     if (await copyText(full)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     }
   };
-
   return (
-    <div style={cardWrap("#8B9FD4")}>
-      <CardHead icon="✍️" title="Apology Draft" color="#6878C4">
-        <ActionBtn onClick={handleCopy} color="#6878C4">
+    <div style={cardWrap("#7B8FD4")}>
+      <CardHead icon="✍️" title="Apology Draft" color="#8090D4">
+        <ActionBtn onClick={handleCopy} color="#8090D4">
           {copied ? "✓ Copied!" : "Copy Text"}
         </ActionBtn>
         {onDraftEmail && (
           <ActionBtn
             onClick={onDraftEmail}
             disabled={emailLoading || emailDone}
-            color={emailDone ? T.green : T.orange}
+            color={emailDone ? T.green : T.gold}
           >
             {emailLoading ? (
               <>
-                <Spinner size={11} color={T.orange} /> Working…
+                <Spinner size={11} color={T.gold} /> Working…
               </>
             ) : emailDone ? (
               "✓ Drafted in Gmail"
@@ -617,17 +668,17 @@ function ApologyCard({ apology, onDraftEmail, emailLoading, emailDone }) {
           </ActionBtn>
         )}
       </CardHead>
-
       <div
         style={{
-          background: T.surface,
-          border: `1.5px solid ${T.border}`,
+          background: T.surface2,
+          border: `1px solid ${T.border}`,
           borderRadius: T.radiusSm,
-          padding: "16px 20px",
-          fontSize: 14,
-          fontWeight: 600,
-          lineHeight: 1.75,
-          color: T.text,
+          padding: "16px 18px",
+          fontSize: 13,
+          fontWeight: 400,
+          lineHeight: 1.8,
+          color: T.parchment,
+          fontFamily: T.fontBody,
         }}
       >
         {apology?.subject && (
@@ -639,7 +690,7 @@ function ApologyCard({ apology, onDraftEmail, emailLoading, emailDone }) {
             }}
           >
             <span style={{ ...metaLabel, display: "inline" }}>SUBJECT: </span>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>
               {apology.subject}
             </span>
           </div>
@@ -649,9 +700,9 @@ function ApologyCard({ apology, onDraftEmail, emailLoading, emailDone }) {
           <div
             style={{
               marginTop: 14,
-              color: T.textMuted,
+              color: T.parchmentDim,
               fontStyle: "italic",
-              fontSize: 13,
+              fontSize: 12,
             }}
           >
             {apology.ps_line}
@@ -665,24 +716,23 @@ function ApologyCard({ apology, onDraftEmail, emailLoading, emailDone }) {
 // ─── Gift Card ────────────────────────────────────────────────────────────────
 function GiftCard({ gift }) {
   return (
-    <div style={cardWrap("#9B59B6")}>
-      <CardHead icon="🎁" title="Recovery Offering" color="#7D3C98" />
-
+    <div style={cardWrap(T.purple)}>
+      <CardHead icon="🎁" title="Recovery Offering" color={T.purple} />
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
           <div style={metaLabel}>PRIMARY RECOMMENDATION</div>
           <div
             style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: T.text,
-              lineHeight: 1.6,
+              fontSize: 13,
+              fontWeight: 500,
+              color: T.parchment,
+              lineHeight: 1.65,
+              fontFamily: T.fontBody,
             }}
           >
             {gift?.primary_recommendation}
           </div>
         </div>
-
         <div
           style={{
             display: "flex",
@@ -695,7 +745,7 @@ function GiftCard({ gift }) {
             <MetaPill
               label="Price range"
               value={gift.price_range}
-              color="#7D3C98"
+              color={T.purple}
             />
           )}
           {gift?.estimated_impact && (
@@ -706,7 +756,6 @@ function GiftCard({ gift }) {
             />
           )}
         </div>
-
         {gift?.purchase_link && (
           <a
             href={gift.purchase_link}
@@ -716,45 +765,46 @@ function GiftCard({ gift }) {
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              background: "rgba(155,89,182,0.08)",
-              border: "1.5px solid rgba(155,89,182,0.28)",
+              background: T.purpleLight,
+              border: `1px solid ${T.purple}30`,
               borderRadius: T.radiusSm,
               padding: "9px 16px",
-              color: "#7D3C98",
-              fontWeight: 800,
-              fontSize: 13,
+              color: T.purple,
+              fontWeight: 600,
+              fontSize: 12,
               textDecoration: "none",
               width: "fit-content",
+              fontFamily: T.fontBody,
             }}
           >
             🛒 Shop Gift →
           </a>
         )}
-
         <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
           <div style={metaLabel}>BACKUP</div>
           <div
             style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: T.textMuted,
-              lineHeight: 1.55,
+              fontSize: 12,
+              fontWeight: 400,
+              color: T.parchmentDim,
+              lineHeight: 1.6,
+              fontFamily: T.fontBody,
             }}
           >
             {gift?.backup_recommendation}
           </div>
         </div>
-
         {gift?.gesture_alternative && (
           <div>
             <div style={metaLabel}>GESTURE ALTERNATIVE</div>
             <div
               style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: T.textMuted,
+                fontSize: 12,
+                fontWeight: 400,
+                color: T.parchmentDim,
                 fontStyle: "italic",
-                lineHeight: 1.55,
+                lineHeight: 1.6,
+                fontFamily: T.fontBody,
               }}
             >
               {gift.gesture_alternative}
@@ -770,12 +820,12 @@ function GiftCard({ gift }) {
 function FollowUpCard({ followup, onSchedule, scheduleLoading, scheduleDone }) {
   return (
     <div style={cardWrap(T.green)}>
-      <CardHead icon="📅" title="Follow-up Plan" color="#2E6A2E">
+      <CardHead icon="📅" title="Follow-up Plan" color={T.green}>
         {onSchedule && (
           <ActionBtn
             onClick={onSchedule}
             disabled={scheduleLoading || scheduleDone}
-            color={scheduleDone ? T.green : "#2E6A2E"}
+            color={scheduleDone ? T.green : T.green}
           >
             {scheduleLoading ? (
               <>
@@ -789,7 +839,6 @@ function FollowUpCard({ followup, onSchedule, scheduleLoading, scheduleDone }) {
           </ActionBtn>
         )}
       </CardHead>
-
       <div
         style={{
           display: "grid",
@@ -800,7 +849,14 @@ function FollowUpCard({ followup, onSchedule, scheduleLoading, scheduleDone }) {
       >
         <div>
           <div style={metaLabel}>SEND IN</div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "#2E6A2E" }}>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: T.green,
+              fontFamily: T.fontBody,
+            }}
+          >
             {followup?.followup_timing}
           </div>
         </div>
@@ -808,29 +864,30 @@ function FollowUpCard({ followup, onSchedule, scheduleLoading, scheduleDone }) {
           <div style={metaLabel}>CALENDAR TITLE</div>
           <div
             style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: T.text,
+              fontSize: 12,
+              fontWeight: 500,
+              color: T.parchment,
               lineHeight: 1.4,
+              fontFamily: T.fontBody,
             }}
           >
             {followup?.calendar_title}
           </div>
         </div>
       </div>
-
       {followup?.followup_message && (
         <div
           style={{
-            background: T.greenLight,
-            border: "1.5px solid rgba(74,122,74,0.22)",
+            background: "rgba(78,122,80,0.08)",
+            border: `1px solid rgba(78,122,80,0.20)`,
             borderRadius: T.radiusSm,
             padding: "12px 16px",
-            fontSize: 14,
+            fontSize: 13,
             fontStyle: "italic",
-            fontWeight: 600,
-            color: T.text,
-            lineHeight: 1.65,
+            fontWeight: 400,
+            color: T.parchment,
+            lineHeight: 1.7,
+            fontFamily: T.fontDisplay,
           }}
         >
           "{followup.followup_message}"
@@ -843,8 +900,8 @@ function FollowUpCard({ followup, onSchedule, scheduleLoading, scheduleDone }) {
 // ─── Damage Assessment Card ───────────────────────────────────────────────────
 function DamageCard({ assessment }) {
   return (
-    <div style={cardWrap(T.amber)}>
-      <CardHead icon="⚖️" title="Damage Assessment" color="#A06010" />
+    <div style={cardWrap(T.crimson)}>
+      <CardHead icon="⚖️" title="Damage Assessment" color={T.crimson} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         {[
           ["Severity", <SeverityBadge severity={assessment?.severity} />],
@@ -856,11 +913,12 @@ function DamageCard({ assessment }) {
             <div style={metaLabel}>{label}</div>
             <div
               style={{
-                fontWeight: 700,
+                fontWeight: 500,
                 fontSize: 13,
-                color: T.text,
+                color: T.parchment,
                 marginTop: 2,
-                lineHeight: 1.4,
+                lineHeight: 1.45,
+                fontFamily: T.fontBody,
               }}
             >
               {val}
@@ -873,7 +931,7 @@ function DamageCard({ assessment }) {
 }
 
 // ─── Input Form ───────────────────────────────────────────────────────────────
-function InputForm({ onSubmit, onDemo }) {
+function InputForm({ onSubmit, onDemo, onContextInput }) {
   const [form, setForm] = useState({
     name: "",
     relationship: "close friend",
@@ -887,7 +945,6 @@ function InputForm({ onSubmit, onDemo }) {
   });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
   const canSubmit =
     form.name.trim() &&
     (form.failure_type !== "other" || form.custom_failure.trim());
@@ -905,13 +962,14 @@ function InputForm({ onSubmit, onDemo }) {
 
   const field = {
     width: "100%",
-    background: T.white,
-    border: `1.5px solid ${T.border}`,
+    background: "rgba(0,0,0,0.35)",
+    border: `1px solid ${T.border}`,
     borderRadius: T.radiusSm,
     padding: "10px 13px",
-    color: T.text,
-    fontSize: 14,
-    fontWeight: 600,
+    color: T.parchment,
+    fontSize: 13,
+    fontWeight: 400,
+    fontFamily: T.fontBody,
     outline: "none",
     transition: "border-color 0.2s ease",
   };
@@ -920,12 +978,13 @@ function InputForm({ onSubmit, onDemo }) {
     <label
       style={{
         display: "block",
-        fontSize: 10,
-        fontWeight: 800,
-        color: T.textFaint,
-        letterSpacing: "1.8px",
+        fontSize: 9,
+        fontWeight: 600,
+        color: T.parchmentFaint,
+        letterSpacing: "2px",
         textTransform: "uppercase",
         marginBottom: 6,
+        fontFamily: T.fontBody,
       }}
     >
       {text}
@@ -934,7 +993,6 @@ function InputForm({ onSubmit, onDemo }) {
 
   return (
     <div>
-      {/* Name + Relationship */}
       <div
         style={{
           display: "grid",
@@ -950,7 +1008,7 @@ function InputForm({ onSubmit, onDemo }) {
             placeholder="Sarah…"
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.orange)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
             onBlur={(e) => (e.target.style.borderColor = T.border)}
           />
         </div>
@@ -960,6 +1018,8 @@ function InputForm({ onSubmit, onDemo }) {
             style={field}
             value={form.relationship}
             onChange={(e) => set("relationship", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
           >
             {RELATIONSHIP_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -970,13 +1030,14 @@ function InputForm({ onSubmit, onDemo }) {
         </div>
       </div>
 
-      {/* What happened */}
       <div style={{ marginBottom: 14 }}>
         {lbl("What did you do")}
         <select
           style={field}
           value={form.failure_type}
           onChange={(e) => set("failure_type", e.target.value)}
+          onFocus={(e) => (e.target.style.borderColor = T.gold)}
+          onBlur={(e) => (e.target.style.borderColor = T.border)}
         >
           {FAILURE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -994,13 +1055,12 @@ function InputForm({ onSubmit, onDemo }) {
             placeholder="I forgot to…"
             value={form.custom_failure}
             onChange={(e) => set("custom_failure", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.orange)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
             onBlur={(e) => (e.target.style.borderColor = T.border)}
           />
         </div>
       )}
 
-      {/* Time / Budget / Medium */}
       <div
         style={{
           display: "grid",
@@ -1015,6 +1075,8 @@ function InputForm({ onSubmit, onDemo }) {
             style={field}
             value={form.time_elapsed}
             onChange={(e) => set("time_elapsed", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
           >
             {[
               "just happened",
@@ -1035,6 +1097,8 @@ function InputForm({ onSubmit, onDemo }) {
             style={field}
             value={form.budget}
             onChange={(e) => set("budget", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
           >
             {BUDGET_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -1049,6 +1113,8 @@ function InputForm({ onSubmit, onDemo }) {
             style={field}
             value={form.medium}
             onChange={(e) => set("medium", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
           >
             {MEDIUM_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -1059,20 +1125,19 @@ function InputForm({ onSubmit, onDemo }) {
         </div>
       </div>
 
-      {/* Context */}
       <div style={{ marginBottom: 14 }}>
         {lbl("Anything the agent should know")}
         <textarea
-          style={{ ...field, height: 78, resize: "vertical" }}
+          style={{ ...field, height: 80, resize: "vertical" }}
           placeholder="She's been stressed with deadlines lately, we've been friends 10 years…"
           value={form.additional_context}
           onChange={(e) => set("additional_context", e.target.value)}
-          onFocus={(e) => (e.target.style.borderColor = T.orange)}
+          onInput={(e) => onContextInput?.(e.target.value)}
+          onFocus={(e) => (e.target.style.borderColor = T.gold)}
           onBlur={(e) => (e.target.style.borderColor = T.border)}
         />
       </div>
 
-      {/* Prior failures */}
       <label
         style={{
           display: "flex",
@@ -1080,41 +1145,42 @@ function InputForm({ onSubmit, onDemo }) {
           gap: 10,
           marginBottom: 26,
           cursor: "pointer",
-          fontSize: 13,
-          fontWeight: 700,
-          color: T.textMuted,
+          fontSize: 12,
+          fontWeight: 400,
+          color: T.parchmentDim,
+          fontFamily: T.fontBody,
         }}
       >
         <input
           type="checkbox"
           checked={form.prior_failures}
           onChange={(e) => set("prior_failures", e.target.checked)}
-          style={{
-            accentColor: T.orange,
-            width: 16,
-            height: 16,
-            flexShrink: 0,
-          }}
+          style={{ accentColor: T.gold, width: 15, height: 15, flexShrink: 0 }}
         />
         I've let this person down before
       </label>
 
-      {/* Submit */}
       <button
         onClick={handleSubmit}
         disabled={loading || !canSubmit}
         style={{
           width: "100%",
-          padding: "15px",
-          background: loading || !canSubmit ? T.orangeLight : T.orange,
-          border: `2px solid ${loading || !canSubmit ? T.orangeBorder : T.orange}`,
+          padding: "14px",
+          background:
+            loading || !canSubmit
+              ? "rgba(201,168,76,0.08)"
+              : "linear-gradient(90deg, #B8312F, #C9A84C, #B8312F)",
+          backgroundSize: "200% auto",
+          animation:
+            loading || !canSubmit ? "none" : "gradientShift 3s ease infinite",
+          border: `1px solid ${loading || !canSubmit ? T.goldBorder : "transparent"}`,
           borderRadius: T.radius,
-          color: loading || !canSubmit ? T.orange : "#fff",
-          fontSize: 16,
-          fontWeight: 900,
+          color: loading || !canSubmit ? T.gold : "#0E0C08",
+          fontSize: 15,
+          fontWeight: 700,
+          fontFamily: T.fontBody,
           cursor: loading || !canSubmit ? "not-allowed" : "pointer",
-          letterSpacing: "0.3px",
-          transition: "all 0.18s ease",
+          transition: "opacity 0.18s ease",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1123,215 +1189,29 @@ function InputForm({ onSubmit, onDemo }) {
       >
         {loading ? (
           <>
-            <Spinner size={16} color={T.orange} /> Running agent…
+            <Spinner size={15} color={T.gold} /> Running agent…
           </>
         ) : (
           "Build My Alibi →"
         )}
       </button>
 
-      {/* Demo shortcut */}
       <div style={{ textAlign: "center", marginTop: 12 }}>
         <button
           onClick={onDemo}
           style={{
             background: "none",
             border: "none",
-            color: T.textFaint,
-            fontSize: 12,
-            fontWeight: 700,
+            color: T.parchmentFaint,
+            fontSize: 11,
+            fontWeight: 500,
             cursor: "pointer",
             textDecoration: "underline",
             textDecorationStyle: "dotted",
+            fontFamily: T.fontBody,
           }}
         >
           or run with demo data (Sarah's birthday) →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Landing Hero ─────────────────────────────────────────────────────────────
-function LandingHero({ onEnter, onDemo }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        textAlign: "center",
-        padding: "68px 24px 56px",
-        animation: "fadeUp 0.5s ease both",
-      }}
-    >
-      {/* Badge */}
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          background: T.orangeLight,
-          border: `1.5px solid ${T.orangeBorder}`,
-          borderRadius: T.radiusFull,
-          padding: "5px 16px",
-          marginBottom: 28,
-          fontSize: 10,
-          fontWeight: 800,
-          color: T.orange,
-          letterSpacing: "2px",
-        }}
-      >
-        🤖 AUTONOMOUS AI AGENT
-      </div>
-
-      {/* Title */}
-      <h1
-        style={{
-          fontSize: "clamp(44px, 9vw, 80px)",
-          fontWeight: 900,
-          color: T.text,
-          lineHeight: 1.0,
-          marginBottom: 10,
-          letterSpacing: "-2px",
-          fontFamily: "'Doors', 'Nunito', sans-serif",
-        }}
-      >
-        THE ALIBI
-      </h1>
-      <p
-        style={{
-          fontSize: "clamp(13px, 2.5vw, 17px)",
-          fontWeight: 800,
-          color: T.orange,
-          letterSpacing: "4px",
-          marginBottom: 28,
-          textTransform: "uppercase",
-        }}
-      >
-        Relationship Recovery Agent
-      </p>
-
-      {/* Description */}
-      <p
-        style={{
-          fontSize: 16,
-          fontWeight: 600,
-          color: T.textMuted,
-          lineHeight: 1.8,
-          maxWidth: 470,
-          marginBottom: 40,
-        }}
-      >
-        You forgot. You flaked. You went MIA.
-        <br />
-        The agent builds your alibi, writes your apology,
-        <br />
-        picks your gift, and schedules the follow-up.{" "}
-        <strong style={{ color: T.text }}>You just show up.</strong>
-      </p>
-
-      {/* Step trail */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 5,
-          flexWrap: "wrap",
-          justifyContent: "center",
-          marginBottom: 44,
-        }}
-      >
-        {[
-          ["🔍", "Research"],
-          ["⚖️", "Assess"],
-          ["📜", "Alibi"],
-          ["✍️", "Apology"],
-          ["🎁", "Gift"],
-          ["📅", "Follow-up"],
-        ].map(([icon, label], i, arr) => (
-          <span
-            key={label}
-            style={{ display: "flex", alignItems: "center", gap: 5 }}
-          >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                background: T.white,
-                border: `1.5px solid ${T.border}`,
-                borderRadius: T.radiusFull,
-                padding: "5px 12px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: T.textMuted,
-                boxShadow: T.shadow,
-              }}
-            >
-              {icon} {label}
-            </span>
-            {i < arr.length - 1 && (
-              <span style={{ color: T.orange, fontSize: 13, fontWeight: 900 }}>
-                →
-              </span>
-            )}
-          </span>
-        ))}
-      </div>
-
-      {/* CTAs */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        <button
-          onClick={onEnter}
-          style={{
-            background: T.orange,
-            border: "none",
-            borderRadius: T.radius,
-            color: "#fff",
-            padding: "15px 44px",
-            fontSize: 16,
-            fontWeight: 900,
-            cursor: "pointer",
-            letterSpacing: "0.3px",
-            boxShadow: `0 6px 22px ${T.orange}45`,
-            transition: "transform 0.15s ease, box-shadow 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = `0 10px 30px ${T.orange}55`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "none";
-            e.currentTarget.style.boxShadow = `0 6px 22px ${T.orange}45`;
-          }}
-        >
-          Confess Your Crime →
-        </button>
-        <button
-          onClick={onDemo}
-          style={{
-            background: "none",
-            border: `1.5px solid ${T.border}`,
-            borderRadius: T.radius,
-            color: T.textMuted,
-            padding: "12px 32px",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-            transition: "border-color 0.15s ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.brown)}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.border)}
-        >
-          Watch the Demo Run
         </button>
       </div>
     </div>
@@ -1352,13 +1232,14 @@ function LoadingScreen() {
         gap: 16,
       }}
     >
-      <Spinner size={30} color={T.orange} />
+      <Spinner size={28} color={T.gold} />
       <div
         style={{
-          fontSize: 12,
-          fontWeight: 800,
-          color: T.textFaint,
-          letterSpacing: "2px",
+          fontSize: 10,
+          fontWeight: 600,
+          color: T.parchmentFaint,
+          letterSpacing: "3px",
+          fontFamily: T.fontBody,
         }}
       >
         LOADING…
@@ -1367,8 +1248,7 @@ function LoadingScreen() {
   );
 }
 
-// ─── Auth-aware entry points ──────────────────────────────────────────────────
-// AuthedEntry calls useAuth0 — only rendered when Auth0Provider is present
+// ─── Auth wrappers ────────────────────────────────────────────────────────────
 function AuthedEntry() {
   const auth = useAuth0();
   return <AppCore auth={auth} />;
@@ -1383,13 +1263,12 @@ const MOCK_AUTH = {
   getAccessTokenSilently: async () => null,
 };
 
-// ─── App Root ─────────────────────────────────────────────────────────────────
 export default function App({ authless = false }) {
   if (authless) return <AppCore auth={MOCK_AUTH} />;
   return <AuthedEntry />;
 }
 
-// ─── App Core (all logic lives here) ─────────────────────────────────────────
+// ─── App Core ─────────────────────────────────────────────────────────────────
 function AppCore({ auth }) {
   const {
     isAuthenticated,
@@ -1400,10 +1279,11 @@ function AppCore({ auth }) {
     getAccessTokenSilently,
   } = auth;
 
-  // ── State ──────────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState("landing");
   /** Ordered tool ids finished before `currentStep` (active step is not included). */
   const [completedStepKeys, setCompletedStepKeys] = useState([]);
+  const [introDone, setIntroDone] = useState(false);
+  const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(null);
   const runningStepRef = useRef(null);
   const fakeRunTimersRef = useRef([]);
@@ -1412,6 +1292,24 @@ function AppCore({ auth }) {
   const [toast, setToast] = useState(null);
   const [actionLoading, setActionLoading] = useState({});
   const [actionDone, setActionDone] = useState({});
+  const [currentCrimeLevel, setCurrentCrimeLevel] = useState("minor");
+
+  const handleContextInput = useCallback((value) => {
+    const lower = value.toLowerCase();
+    const severeHit =
+      value.length > 200 ||
+      ["betrayed", "cheated", "ghosted", "abandoned"].some((w) =>
+        lower.includes(w),
+      );
+    const moderateHit =
+      value.length > 80 ||
+      ["forgot", "cancelled", "late", "missed"].some((w) =>
+        lower.includes(w),
+      );
+    if (severeHit) setCurrentCrimeLevel("severe");
+    else if (moderateHit) setCurrentCrimeLevel("moderate");
+    else setCurrentCrimeLevel("minor");
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1627,48 +1525,6 @@ function AppCore({ auth }) {
   const actL = (k, v) => setActionLoading((s) => ({ ...s, [k]: v }));
   const actD = (k) => setActionDone((s) => ({ ...s, [k]: true }));
 
-  const applyAgentStep = useCallback((tool) => {
-    const prev = runningStepRef.current;
-    runningStepRef.current = tool;
-    if (prev) setCompletedStepKeys((c) => [...c, prev]);
-    setCurrentStep(tool);
-  }, []);
-
-  const finalizeRunningSteps = useCallback(() => {
-    setCompletedStepKeys((c) =>
-      runningStepRef.current ? [...c, runningStepRef.current] : c,
-    );
-    runningStepRef.current = null;
-    setCurrentStep(null);
-  }, []);
-
-  const clearFakeRunTimers = useCallback(() => {
-    fakeRunTimersRef.current.forEach((id) => clearTimeout(id));
-    fakeRunTimersRef.current = [];
-  }, []);
-
-  /** Marks every step done (e.g. agent finished before the fake timeline caught up). */
-  const forceAllStepsComplete = useCallback(() => {
-    runningStepRef.current = null;
-    setCompletedStepKeys(Object.keys(STEPS_META));
-    setCurrentStep(null);
-  }, []);
-
-  /** Drives the loading list on a fixed timer; step 6 stays active until `agent_complete`. */
-  const startFakeLoadingProgress = useCallback(() => {
-    clearFakeRunTimers();
-    const keys = Object.keys(STEPS_META);
-    if (keys.length === 0) return;
-    applyAgentStep(keys[0]);
-    for (let i = 1; i < keys.length; i++) {
-      const id = setTimeout(
-        () => applyAgentStep(keys[i]),
-        FAKE_STEP_DWELL_MS * i,
-      );
-      fakeRunTimersRef.current.push(id);
-    }
-  }, [applyAgentStep, clearFakeRunTimers]);
-
   // ── Demo run ───────────────────────────────────────────────────────────────
   const runDemo = useCallback(() => {
     setPhase("running");
@@ -1678,7 +1534,6 @@ function AppCore({ auth }) {
     setCurrentStep(null);
     setResult(null);
     setActionDone({});
-
     const keys = Object.keys(STEPS_META);
     applyAgentStep(keys[0]);
     for (let i = 1; i < keys.length; i++) {
@@ -1700,54 +1555,33 @@ function AppCore({ auth }) {
     fakeRunTimersRef.current.push(doneId);
   }, [applyAgentStep, finalizeRunningSteps, clearFakeRunTimers]);
 
-  // ── Real submit ────────────────────────────────────────────────────────────
   async function submitForm(formData) {
-    setPhase("running");
-    clearFakeRunTimers();
-    runningStepRef.current = null;
-    setCompletedStepKeys([]);
-    setCurrentStep(null);
-    setResult(null);
-    setActionDone({});
-    startFakeLoadingProgress();
-
-    try {
       const headers = { "Content-Type": "application/json" };
       try {
         const token = await getAccessTokenSilently();
         if (token) headers["Authorization"] = `Bearer ${token}`;
-      } catch {
-        /* no token — proceed without */
-      }
-
+      } catch {}
       const apiUrl =
         (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
         "http://localhost:3001";
-
       const res = await fetch(`${apiUrl}/api/run-agent`, {
         method: "POST",
         headers,
         body: JSON.stringify(formData),
       });
-
       if (!res.ok) throw new Error(`Server ${res.status}`);
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let sseBuffer = "";
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        sseBuffer += decoder.decode(value, { stream: true });
-        const lineParts = sseBuffer.split("\n");
-        sseBuffer = lineParts.pop() ?? "";
-
-        for (const line of lineParts) {
-          const trimmed = line.replace(/\r$/, "");
-          if (!trimmed.startsWith("data: ")) continue;
+        const lines = decoder
+          .decode(value, { stream: true })
+          .split("\n")
+          .filter((l) => l.startsWith("data: "));
+        for (const line of lines) {
           try {
-            const ev = JSON.parse(trimmed.slice(6));
+            const ev = JSON.parse(line.slice(6));
             if (ev.type === "agent_complete") {
               clearFakeRunTimers();
               forceAllStepsComplete();
@@ -1763,9 +1597,7 @@ function AppCore({ auth }) {
               showToast(`Agent error: ${ev.message}`, "error");
               setPhase("form");
             }
-          } catch {
-            /* malformed SSE line */
-          }
+          } catch {}
         }
       }
 
@@ -1801,7 +1633,6 @@ function AppCore({ auth }) {
     }
   }
 
-  // ── Backend actions ────────────────────────────────────────────────────────
   async function sendEmail() {
     if (!failureId || !result?.apology) return;
     actL("email", true);
@@ -1905,207 +1736,212 @@ function AppCore({ auth }) {
     }
   }
 
-  // ── Guard ──────────────────────────────────────────────────────────────────
   if (isLoading) return <LoadingScreen />;
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-
       {toast && <Toast {...toast} onDismiss={() => setToast(null)} />}
 
-      <div style={{ minHeight: "100vh", background: T.bg }}>
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <header
+      <div className="grain" style={{ minHeight: "100vh", background: T.bg }}>
+        <div
           style={{
-            background: T.white,
-            borderBottom: `2px solid ${T.border}`,
-            padding: "0 28px",
-            height: 58,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            position: "sticky",
-            top: 0,
-            zIndex: 100,
-            boxShadow: "0 2px 8px rgba(26,13,5,0.05)",
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: "none",
           }}
         >
-          <button
-            onClick={() => {
-              setPhase(isAuthenticated ? "form" : "landing");
-              setResult(null);
-              runningStepRef.current = null;
-              setCompletedStepKeys([]);
-              setCurrentStep(null);
-            }}
+        <div style={{ position: "relative", zIndex: 10 }}>
+        {phase !== "landing" && (
+          <header
             style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              textAlign: "left",
+              background: "rgba(14,12,8,0.85)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              borderBottom: `1px solid ${T.border}`,
+              padding: "0 32px",
+              height: 58,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              position: "sticky",
+              top: 0,
+              zIndex: 100,
             }}
           >
-            <div
+            <button
+              onClick={() => {
+                setPhase("landing");
+                setResult(null);
+                setSteps([]);
+              }}
               style={{
-                fontSize: 18,
-                fontWeight: 900,
-                color: T.text,
-                letterSpacing: "-0.5px",
-                lineHeight: 1,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                textAlign: "left",
               }}
             >
-              THE ALIBI
-            </div>
-            <div
-              style={{
-                fontSize: 8,
-                fontWeight: 800,
-                color: T.orange,
-                letterSpacing: "2.5px",
-                marginTop: 2,
-              }}
-            >
-              RELATIONSHIP RECOVERY AGENT
-            </div>
-          </button>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {user?.email && (
-              <span
-                style={{ fontSize: 12, fontWeight: 600, color: T.textMuted }}
-              >
-                {user.email}
-              </span>
-            )}
-            {isAuthenticated && auth !== MOCK_AUTH ? (
-              <button
-                onClick={() => logout({ returnTo: window.location.origin })}
+              <div
                 style={{
-                  background: "none",
-                  border: `1.5px solid ${T.border}`,
-                  borderRadius: T.radiusSm,
-                  padding: "6px 14px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: T.textMuted,
-                  cursor: "pointer",
+                  fontSize: 18,
+                  fontWeight: 900,
+                  fontStyle: "italic",
+                  color: T.parchment,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1,
+                  fontFamily: T.fontDisplay,
                 }}
               >
-                Sign out
-              </button>
-            ) : !isAuthenticated ? (
-              <button
-                onClick={() => loginWithRedirect()}
+                Sir Alibi
+              </div>
+              <div
                 style={{
-                  background: T.orange,
-                  border: "none",
-                  borderRadius: T.radiusSm,
-                  padding: "8px 18px",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  color: "#fff",
-                  cursor: "pointer",
+                  fontSize: 8,
+                  fontWeight: 600,
+                  color: T.gold,
+                  letterSpacing: "3px",
+                  marginTop: 2,
+                  fontFamily: T.fontBody,
                 }}
               >
-                Sign in
-              </button>
-            ) : null}
-          </div>
-        </header>
+                YOUR KNIGHT IN SHINING ALIBI
+              </div>
+            </button>
 
-        {/* ── Page Content ───────────────────────────────────────────────── */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {user?.email && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 400,
+                    color: T.parchmentDim,
+                    fontFamily: T.fontBody,
+                  }}
+                >
+                  {user.email}
+                </span>
+              )}
+              {isAuthenticated && auth !== MOCK_AUTH ? (
+                <button
+                  onClick={() => logout({ returnTo: window.location.origin })}
+                  style={{
+                    background: "none",
+                    border: `1px solid ${T.border}`,
+                    borderRadius: T.radiusSm,
+                    padding: "6px 14px",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: T.parchmentDim,
+                    fontFamily: T.fontBody,
+                    cursor: "pointer",
+                  }}
+                >
+                  Sign out
+                </button>
+              ) : !isAuthenticated ? (
+                <button
+                  onClick={() => loginWithRedirect()}
+                  style={{
+                    background: T.goldLight,
+                    border: `1px solid ${T.goldBorder}`,
+                    borderRadius: T.radiusSm,
+                    padding: "7px 18px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: T.gold,
+                    fontFamily: T.fontBody,
+                    cursor: "pointer",
+                  }}
+                >
+                  Sign in
+                </button>
+              ) : null}
+            </div>
+          </header>
+        )}
+
+        {/* ── Page Content ── */}
         <main
-          style={{ maxWidth: 720, margin: "0 auto", padding: "0 20px 72px" }}
+          style={{
+            maxWidth: phase === "landing" ? "none" : 720,
+            margin: phase === "landing" ? "0" : "0 auto",
+            padding: phase === "landing" ? "0" : "0 20px 80px",
+          }}
         >
           {/* LANDING */}
-          {phase === "landing" && (
-            <LandingHero onEnter={() => setPhase("form")} onDemo={runDemo} />
+          {phase === "landing" && !introDone && (
+            <LoadingCrest onDone={() => setIntroDone(true)} />
+          )}
+          {phase === "landing" && introDone && (
+            <div style={{ background: "transparent" }}>
+              <MarketingHome
+                onSummonKnight={() => setPhase("form")}
+                onDemo={runDemo}
+                isAuthenticated={isAuthenticated}
+                onLogin={() => loginWithRedirect()}
+                onLogout={() => logout({ returnTo: window.location.origin })}
+                userEmail={user?.email}
+              />
+            </div>
           )}
 
           {/* FORM */}
           {phase === "form" && (
             <div
-              style={{ animation: "fadeUp 0.35s ease both", paddingTop: 48 }}
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                padding: "0 5% 0 0",
+              }}
             >
-              <div style={{ marginBottom: 28 }}>
-                <h2
-                  style={{
-                    fontSize: 28,
-                    fontWeight: 900,
-                    color: T.text,
-                    marginBottom: 8,
-                    letterSpacing: "-0.5px",
-                  }}
-                >
-                  Confess your crime.
-                </h2>
-                <p
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: T.textMuted,
-                    lineHeight: 1.65,
-                  }}
-                >
-                  Tell the agent what happened. It handles everything else —
-                  autonomously.
-                </p>
-              </div>
               <div
                 style={{
-                  background: T.white,
-                  border: `1.5px solid ${T.border}`,
-                  borderRadius: T.radiusLg,
-                  padding: "26px 26px 22px",
-                  boxShadow: T.shadowMd,
+                  width: 480,
+                  maxHeight: "85vh",
+                  overflowY: "auto",
+                  background: "rgba(14,12,8,0.88)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: "1px solid rgba(201,168,76,0.15)",
+                  borderRadius: 8,
+                  padding: 32,
+                  animation: "fadeUp 0.35s ease both",
                 }}
               >
-                <InputForm onSubmit={submitForm} onDemo={runDemo} />
-              </div>
-            </div>
-          )}
-
-          {/* RUNNING */}
-          {phase === "running" && (
-            <div style={{ animation: "fadeUp 0.3s ease both", paddingTop: 48 }}>
-              <div style={{ marginBottom: 28 }}>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    background: T.orangeLight,
-                    border: `1.5px solid ${T.orangeBorder}`,
-                    borderRadius: T.radiusFull,
-                    padding: "5px 14px",
-                    marginBottom: 14,
-                    fontSize: 10,
-                    fontWeight: 800,
-                    color: T.orange,
-                    letterSpacing: "2px",
-                  }}
-                >
-                  <Spinner size={10} color={T.orange} /> AGENT RUNNING
+                <div style={{ marginBottom: 30 }}>
+                  <h2
+                    style={{
+                      fontSize: 36,
+                      fontWeight: 700,
+                      fontStyle: "italic",
+                      color: T.parchment,
+                      marginBottom: 8,
+                      letterSpacing: "-0.5px",
+                      fontFamily: T.fontDisplay,
+                    }}
+                  >
+                    Confess your crime.
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 400,
+                      color: T.parchmentDim,
+                      lineHeight: 1.65,
+                      fontFamily: T.fontBody,
+                    }}
+                  >
+                    Tell the agent what happened. It handles everything else —
+                    autonomously.
+                  </p>
                 </div>
-                <h2
-                  style={{
-                    fontSize: 26,
-                    fontWeight: 900,
-                    color: T.text,
-                    marginBottom: 6,
-                    letterSpacing: "-0.5px",
-                  }}
-                >
-                  Building your alibi.
-                </h2>
-                <p
-                  style={{ fontSize: 13, fontWeight: 600, color: T.textMuted }}
-                >
-                  The agent is reasoning autonomously. Don't close this tab.
-                </p>
               </div>
               <div
                 style={{
@@ -2116,9 +1952,10 @@ function AppCore({ auth }) {
                   boxShadow: T.shadow,
                 }}
               >
-                <ProgressPanel
-                  completedKeys={completedStepKeys}
-                  currentStep={currentStep}
+                <InputForm
+                  onSubmit={submitForm}
+                  onDemo={runDemo}
+                  onContextInput={handleContextInput}
                 />
               </div>
             </div>
@@ -2126,14 +1963,32 @@ function AppCore({ auth }) {
 
           {/* RESULT */}
           {phase === "result" && result && (
-            <div style={{ animation: "fadeUp 0.4s ease both", paddingTop: 48 }}>
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 10,
+                overflowY: "auto",
+                background: "rgba(14,12,8,0.82)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                animation: "fadeUp 0.4s ease both",
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: 720,
+                  margin: "0 auto",
+                  padding: "48px 20px 80px",
+                }}
+              >
               {/* Header */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-start",
-                  marginBottom: 24,
+                  marginBottom: 22,
                   flexWrap: "wrap",
                   gap: 12,
                 }}
@@ -2141,20 +1996,22 @@ function AppCore({ auth }) {
                 <div>
                   <h2
                     style={{
-                      fontSize: 28,
-                      fontWeight: 900,
-                      color: T.text,
+                      fontSize: 34,
+                      fontWeight: 700,
+                      fontStyle: "italic",
+                      color: T.parchment,
                       marginBottom: 5,
-                      letterSpacing: "-0.5px",
+                      fontFamily: T.fontDisplay,
                     }}
                   >
                     Your alibi is ready.
                   </h2>
                   <p
                     style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: T.textMuted,
+                      fontSize: 12,
+                      fontWeight: 400,
+                      color: T.parchmentDim,
+                      fontFamily: T.fontBody,
                     }}
                   >
                     {Object.keys(STEPS_META).length} agent steps completed
@@ -2165,13 +2022,13 @@ function AppCore({ auth }) {
                 )}
               </div>
 
-              {/* Step completion pills */}
+              {/* Completion pills */}
               <div
                 style={{
                   display: "flex",
                   gap: 6,
                   flexWrap: "wrap",
-                  marginBottom: 24,
+                  marginBottom: 22,
                 }}
               >
                 {Object.entries(STEPS_META).map(([, meta]) => (
@@ -2181,13 +2038,14 @@ function AppCore({ auth }) {
                       display: "inline-flex",
                       alignItems: "center",
                       gap: 4,
-                      background: T.greenLight,
-                      border: "1.5px solid rgba(74,122,74,0.25)",
+                      background: "rgba(78,122,80,0.10)",
+                      border: "1px solid rgba(78,122,80,0.22)",
                       borderRadius: T.radiusFull,
                       padding: "3px 10px",
-                      fontSize: 11,
-                      fontWeight: 700,
+                      fontSize: 10,
+                      fontWeight: 600,
                       color: T.green,
+                      fontFamily: T.fontBody,
                     }}
                   >
                     ✓ {meta.icon} {meta.label}
@@ -2195,29 +2053,47 @@ function AppCore({ auth }) {
                 ))}
               </div>
 
-              {/* Result cards */}
+              {/* Result cards — staggered */}
               {result.damage_assessment && (
-                <DamageCard assessment={result.damage_assessment} />
+                <HoverCard delay="0.05s">
+                  <DamageCard assessment={result.damage_assessment} />
+                </HoverCard>
               )}
-              {result.alibi && <AlibiCard alibi={result.alibi} />}
+              {result.alibi && (
+                <HoverCard delay="0.15s">
+                  <AlibiCard alibi={result.alibi} />
+                </HoverCard>
+              )}
               {result.apology && (
-                <ApologyCard
-                  apology={result.apology}
-                  onDraftEmail={failureId !== "demo-run-001" ? sendEmail : null}
-                  emailLoading={actionLoading.email}
-                  emailDone={actionDone.email}
-                />
+                <HoverCard delay="0.25s">
+                  <ApologyCard
+                    apology={result.apology}
+                    onDraftEmail={
+                      failureId !== "demo-run-001" ? sendEmail : null
+                    }
+                    emailLoading={actionLoading.email}
+                    emailDone={actionDone.email}
+                  />
+                </HoverCard>
               )}
-              {result.gift && <GiftCard gift={result.gift} />}
+              {result.gift && (
+                <HoverCard delay="0.35s">
+                  <GiftCard gift={result.gift} />
+                </HoverCard>
+              )}
               {result.followup && (
-                <FollowUpCard
-                  followup={result.followup}
-                  onSchedule={
-                    failureId !== "demo-run-001" ? scheduleFollowup : undefined
-                  }
-                  scheduleLoading={actionLoading.followup}
-                  scheduleDone={actionDone.followup}
-                />
+                <HoverCard delay="0.45s">
+                  <FollowUpCard
+                    followup={result.followup}
+                    onSchedule={
+                      failureId !== "demo-run-001"
+                        ? scheduleFollowup
+                        : undefined
+                    }
+                    scheduleLoading={actionLoading.followup}
+                    scheduleDone={actionDone.followup}
+                  />
+                </HoverCard>
               )}
 
               {/* New Case */}
@@ -2236,28 +2112,46 @@ function AppCore({ auth }) {
                   marginTop: 8,
                   padding: "13px",
                   background: "none",
-                  border: `1.5px solid ${T.border}`,
+                  border: `1px solid ${T.border}`,
                   borderRadius: T.radius,
-                  color: T.textMuted,
-                  fontSize: 14,
-                  fontWeight: 700,
+                  color: T.parchmentDim,
+                  fontSize: 13,
+                  fontWeight: 500,
                   cursor: "pointer",
+                  fontFamily: T.fontBody,
                   transition: "all 0.15s ease",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = T.orange;
-                  e.currentTarget.style.color = T.orange;
+                  e.currentTarget.style.borderColor = T.gold;
+                  e.currentTarget.style.color = T.gold;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = T.border;
-                  e.currentTarget.style.color = T.textMuted;
+                  e.currentTarget.style.color = T.parchmentDim;
                 }}
               >
                 + New Case
               </button>
+              </div>
             </div>
           )}
         </main>
+        </div>
+        {phase === "running" && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 20,
+              pointerEvents: "auto",
+            }}
+          >
+            <GeneratingOverlay
+              isGenerating={true}
+              currentPhase={currentStep || ""}
+            />
+          </div>
+        )}
       </div>
     </>
   );
