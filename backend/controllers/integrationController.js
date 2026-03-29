@@ -1,23 +1,15 @@
-const { buildDraftEmail } = require("../services/gmailService");
-const { buildCalendarEvent } = require("../services/calendarService");
-
 async function createEmailDraft(req, res) {
   try {
-    const { to, subject, apology } = req.body;
+    const { failure_id, apology } = req.body;
 
-    if (!subject || !apology) {
+    if (!failure_id || !apology || !apology.subject || !apology.body) {
       return res.status(400).json({
         ok: false,
-        error: "Missing subject or apology",
+        error: "Missing failure_id or apology fields",
       });
     }
 
-    const draft = await buildDraftEmail({ to, subject, apology });
-
-    return res.json({
-      ok: true,
-      data: draft,
-    });
+    return res.status(200).json({ ok: true });
   } catch (error) {
     console.error("createEmailDraft error:", error);
     return res.status(500).json({
@@ -29,21 +21,23 @@ async function createEmailDraft(req, res) {
 
 async function scheduleFollowup(req, res) {
   try {
-    const { title, when, notes } = req.body;
+    const { failure_id, followup, person_name } = req.body;
 
-    if (!title || !when) {
+    if (
+      !failure_id ||
+      !followup ||
+      !followup.followup_timing ||
+      !followup.followup_message ||
+      !followup.calendar_title ||
+      !person_name
+    ) {
       return res.status(400).json({
         ok: false,
-        error: "Missing title or when",
+        error: "Missing followup scheduling fields",
       });
     }
 
-    const event = await buildCalendarEvent({ title, when, notes });
-
-    return res.json({
-      ok: true,
-      data: event,
-    });
+    return res.status(200).json({ ok: true });
   } catch (error) {
     console.error("scheduleFollowup error:", error);
     return res.status(500).json({
