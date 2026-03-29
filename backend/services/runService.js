@@ -14,9 +14,106 @@ Additional context: ${body.additional_context || ""}
   `.trim();
 }
 
-function normalizeAgentResponse(raw, input) {
+/** Maps agent `RunAgentResponse` (writing/reasoning/research) to the UI bundle used by the frontend. */
+function mapRunAgentContractToUi(raw, input) {
+  const w = raw.writing;
+  const r = raw.reasoning;
+  const res = raw.research;
+  const actions = raw.actions;
+  const name = input?.name?.trim() || raw.input?.personName || "there";
+
+  const sev = r?.severity === "med" ? "medium" : r?.severity;
+  const primaryGift = res?.giftIdeas?.[0];
+  const backupGift = res?.giftIdeas?.[1];
+
+  const narrativeParts = [
+    w?.optionalLightFraming?.trim(),
+    r?.plan?.length ? r.plan.map((p) => `• ${p}`).join("\n") : "",
+  ].filter(Boolean);
+  const narrative =
+    narrativeParts.join("\n\n").trim() ||
+    (w?.apologyMessage ? String(w.apologyMessage).slice(0, 1200) : "");
+
   return {
-    failure_id: raw?.failure_id || `failure_${Date.now()}`,
+    failure_id: raw.runId || raw.failure_id || `failure_${Date.now()}`,
+    result: {
+      research: {
+        inferred_interests:
+          res?.giftIdeas?.map((g) => g.title).filter(Boolean) ?? [],
+        communication_style: r
+          ? `${r.tone} tone · ${r.alibiPolicy?.replace(/_/g, " ") ?? "balanced"} framing`
+          : "",
+        sensitivity_level: r?.severity ?? "med",
+        research_complete: true,
+        clarifying_questions: res?.clarifyingQuestions ?? [],
+      },
+      damage_assessment: r
+        ? {
+            severity: sev,
+            recommended_tone: r.tone,
+            urgency: `within ~${res?.followUpWindowDays ?? 3} days`,
+            recovery_strategy: r.plan?.join(" ") || r.risks?.join(" ") || "",
+          }
+        : {},
+      alibi: narrative
+        ? {
+            narrative,
+            plausibility_score:
+              r?.alibiPolicy === "full_alibi"
+                ? 0.88
+                : r?.alibiPolicy === "light_framing"
+                  ? 0.78
+                  : 0.72,
+            recommended_delivery: `${r?.tone ?? "sincere"} · ${r?.alibiPolicy?.replace(/_/g, " ") ?? "direct"}`,
+          }
+        : {},
+      apology: {
+        subject: w?.subject || "Message",
+        body: w?.apologyMessage || "",
+        ps_line: w?.followUpMessage
+          ? w.followUpMessage.trim()
+          : "",
+      },
+      gift: primaryGift
+        ? {
+            primary_recommendation: `${primaryGift.title} — ${primaryGift.whyItFits}`,
+            backup_recommendation: backupGift
+              ? `${backupGift.title} — ${backupGift.whyItFits}`
+              : "",
+            gesture_alternative: r?.risks?.[0] || "",
+            estimated_impact: r?.severity === "high" ? "high" : "medium",
+            purchase_link:
+              primaryGift.purchaseLink?.trim() ||
+              `https://www.google.com/search?q=${encodeURIComponent(primaryGift.searchQuery)}`,
+            price_range: primaryGift.priceRange,
+          }
+        : actions?.giftLinks?.length
+          ? {
+              primary_recommendation:
+                "See suggested links from research — pick what fits your relationship best.",
+              purchase_link: actions.giftLinks[0],
+              price_range: "",
+            }
+          : {},
+      followup: {
+        followup_timing: `${actions?.followup?.daysFromNow ?? res?.followUpWindowDays ?? 3} days`,
+        followup_message: w?.followUpMessage || "",
+        calendar_title:
+          actions?.followup?.title || `Follow up with ${name}`,
+        reminder_set: true,
+      },
+    },
+  };
+}
+
+function normalizeAgentResponse(raw, input) {
+  // Live pipeline: `agent/runAlibiAgent` returns `RunAgentResponse` (writing + reasoning + research).
+  if (raw?.writing && raw?.reasoning) {
+    return mapRunAgentContractToUi(raw, input);
+  }
+
+  return {
+    failure_id: raw?.failure_id || raw?.runId || `failure_${Date.now()}`,
     result: {
       research: raw?.research ||
         raw?.result?.research || {
@@ -46,15 +143,8 @@ function normalizeAgentResponse(raw, input) {
   };
 }
 
-async function runAlibiAgent(input, onStep) {
+async function runAlibiAgent(input) {
   const userText = buildAgentInputText(input);
-
-  onStep?.({ tool: "research_person" });
-  onStep?.({ tool: "assess_damage" });
-  onStep?.({ tool: "build_alibi_narrative" });
-  onStep?.({ tool: "draft_apology" });
-  onStep?.({ tool: "recommend_gift" });
-  onStep?.({ tool: "schedule_followup" });
 
   const modulePath = pathToFileURL(
     path.resolve(__dirname, "../../agent/runAlibiAgent.ts"),

@@ -22,12 +22,7 @@ async function runAgent(req, res) {
       res.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
-    const result = await runAlibiAgent(input, (step) => {
-      sendEvent({
-        type: "agent_step",
-        tool: step.tool,
-      });
-    });
+    const result = await runAlibiAgent(input);
 
     sendEvent({
       type: "agent_complete",

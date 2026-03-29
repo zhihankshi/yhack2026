@@ -1,5 +1,5 @@
 {
-  "runId": "f4cff242-e6df-4d79-9c03-4ac46379fc86",
+  "runId": "f9a83e86-e411-41a4-80d7-3a7e4d817632",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,13 +54,13 @@
   },
   "writing": {
     "subject": "Re: forgot anniversary",
-    "apologyMessage": "I'm really sorry for forgetting our anniversary. I know this is important to you, and I want to make it right. I’d like to send you some flowers as a gesture of my regret. Please let me know what you need from me to feel respected.",
-    "followUpMessage": "I hope you’ve had some time to think. I’m here whenever you’re ready to talk."
+    "apologyMessage": "I'm really sorry for forgetting our anniversary. I know this is important to you, and I want to make it right. I’d like to surprise you with some same-day flowers to show how much you mean to me.",
+    "followUpMessage": "I hope you received the flowers and that they brought a smile to your face. If there's anything else you need from me, please let me know."
   },
   "actions": {
     "email": {
       "subject": "Re: forgot anniversary",
-      "body": "I'm really sorry for forgetting our anniversary. I know this is important to you, and I want to make it right. I’d like to send you some flowers as a gesture of my regret. Please let me know what you need from me to feel respected.\n\n—\n\nI hope you’ve had some time to think. I’m here whenever you’re ready to talk.",
+      "body": "I'm really sorry for forgetting our anniversary. I know this is important to you, and I want to make it right. I’d like to surprise you with some same-day flowers to show how much you mean to me.\n\n—\n\nI hope you received the flowers and that they brought a smile to your face. If there's anything else you need from me, please let me know.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -81,11 +81,11 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 3667
+      "write": 2171
     },
     "logs": [
-      "research: fallback — Unterminated string in JSON at position 712",
-      "reason: fallback — Unexpected end of JSON input",
+      "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
+      "reason: fallback — Expected ',' or ']' after array element in JSON at position 527",
       "write: ok"
     ]
   }

@@ -1,5 +1,5 @@
 {
-  "runId": "1a701c0a-bcec-43be-b701-62fdc5cd11cc",
+  "runId": "89e97a58-2721-4046-97bc-6046aa3f8cde",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,14 +54,14 @@
   },
   "writing": {
     "subject": "Re: missed meeting",
-    "apologyMessage": "I apologize for missing our meeting. I mismanaged my schedule and didn't prioritize our time together. I value our discussions and would like to reschedule at your earliest convenience. Please let me know what works for you.",
-    "followUpMessage": "I wanted to check in and see if you had a chance to think about rescheduling our meeting. I'm here whenever you're ready.",
-    "optionalLightFraming": "I understand this may have caused some inconvenience."
+    "apologyMessage": "I apologize for missing our meeting. I mismanaged my schedule and understand that this may have caused inconvenience for you. I value our time together and would like to reschedule at your earliest convenience. Please let me know what works for you.",
+    "followUpMessage": "I wanted to check in and see if you had a chance to think about rescheduling our meeting. I'm here to accommodate your availability.",
+    "optionalLightFraming": "I appreciate your understanding as I work to make this right."
   },
   "actions": {
     "email": {
       "subject": "Re: missed meeting",
-      "body": "I apologize for missing our meeting. I mismanaged my schedule and didn't prioritize our time together. I value our discussions and would like to reschedule at your earliest convenience. Please let me know what works for you.\n\nI understand this may have caused some inconvenience.\n\n—\n\nI wanted to check in and see if you had a chance to think about rescheduling our meeting. I'm here whenever you're ready.",
+      "body": "I apologize for missing our meeting. I mismanaged my schedule and understand that this may have caused inconvenience for you. I value our time together and would like to reschedule at your earliest convenience. Please let me know what works for you.\n\nI appreciate your understanding as I work to make this right.\n\n—\n\nI wanted to check in and see if you had a chance to think about rescheduling our meeting. I'm here to accommodate your availability.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -82,11 +82,11 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 1936
+      "write": 2467
     },
     "logs": [
       "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
-      "reason: fallback — Unterminated string in JSON at position 523",
+      "reason: fallback — Unterminated string in JSON at position 531",
       "write: ok"
     ]
   }
