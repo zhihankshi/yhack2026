@@ -1,71 +1,93 @@
-# THE ALIBI — MVP Setup Guide
+# The Alibi 🛡️
 
-## Architecture Overview
+> **AI-powered social recovery agent** — confess what you did wrong, let the AI craft the perfect apology, draft a Gmail, and send a gift card. Built at YHack 2026.
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Node.js 18+
+- npm
+- A `.env` file in `backend/` (see [Environment Variables](#environment-variables))
+
+### 1. Install dependencies
+
+```bash
+# Root (agent test harness)
+npm install
+
+# Backend (Express API)
+cd backend && npm install
+
+# Frontend (React + Vite)
+cd ../frontend && npm install
 ```
-Frontend (React + Vite)  →  Backend (Express)  →  Agent (Claude tool-use loop)
-     Port 5173                 Port 3001              Anthropic API
-         ↓                         ↓
-    Auth0 (JWT)             MongoDB + Gmail MCP + GCal MCP
+
+### 2. Configure environment
+
+```bash
+cp backend/.env.example backend/.env
+# Then edit backend/.env with your keys (see below)
+```
+
+### 3. Run the app
+
+Open **two terminals**:
+
+```bash
+# Terminal 1 — Backend (port 3001)
+cd backend
+node server.js
+```
+
+```bash
+# Terminal 2 — Frontend (port 5173)
+cd frontend
+npm run dev
+```
+
+Then open **http://localhost:5173**
+
+---
+
+## Architecture
+
+```
+Frontend (React + Vite)  →  Backend (Express + Node)  →  Claude AI (Anthropic SDK)
+     Port 5173                    Port 3001                  tool-use agentic loop
+                                      ↓
+                          Google OAuth / Gmail API
+                          Mongoose / MongoDB
+                          Tremendous Gifting API
 ```
 
 ---
 
-## Person 1 — Agent Architect
-**File: `agent.js`**
+## Environment Variables
 
-### Setup
+Create `backend/.env` from the example:
+
 ```bash
-npm install @anthropic-ai/sdk
+cp backend/.env.example backend/.env
 ```
 
-### What you own
-- The 6-tool agentic loop in `agent.js`
-- Tool definitions and execution logic
-- The `runAlibiAgent(input, onStep)` function
-- Making sure each tool output genuinely informs the next step
-
-### Testing your agent solo (no server needed)
-```bash
-node test-agent.js
-```
-
-Create `test-agent.js`:
-```js
-const { runAlibiAgent } = require('./agent');
-runAlibiAgent({
-  name: "Sarah",
-  relationship: "close friend",
-  failure_type: "forgot their birthday",
-  time_elapsed: "3 days ago",
-  prior_failures: false,
-  budget: "20_50",
-  medium: "text",
-}, (step) => console.log("STEP:", step.tool, "→", step.result))
-.then(result => console.log("FINAL:", JSON.stringify(result, null, 2)));
-```
-
-### Key thing to verify
-The agent calls ALL 6 tools autonomously — not just 1-2. If it stops early, add to the system prompt: "You MUST call all 6 tools before finishing."
-
----
-
-## Person 2 — Integrations & Backend
-**File: `server.js`**
-
-### Setup
-```bash
-npm install express cors mongodb express-oauth2-jwt-bearer dotenv @anthropic-ai/sdk
-```
-
-### Environment variables
-Copy `.env.example` to `.env` and fill in:
-```
-ANTHROPIC_API_KEY=sk-ant-...
-MONGO_URI=mongodb+srv://...   # Use MongoDB Atlas free tier
-AUTH0_DOMAIN=your-app.auth0.com
-AUTH0_AUDIENCE=https://alibi-api
-PORT=3001
-```
+| Variable | Description |
+|---|---|
+| `PORT` | Backend port (default: `3001`) |
+| `ANTHROPIC_API_KEY` | Anthropic / agent API key |
+| `MONGO_URI` | MongoDB Atlas URI |
+| `AUTH0_DOMAIN` | Auth0 Domain |
+| `AUTH0_AUDIENCE` | Auth0 Audience (e.g. `https://alibi-api`) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (for Gmail drafts) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | Must be `http://localhost:3001/api/auth/google/callback` |
+| `TREMENDOUS_API_KEY` | Tremendous sandbox API key |
+| `TREMENDOUS_API_URL` | https://testflight.tremendous.com |
+| `TREMENDOUS_ENVIRONMENT` | testflight |
+| `FUNDING_SOURCE_ID` | Tremendous funding source ID |
+| `CAMPAIGN_ID` | Tremendous campaign ID |
+| `GIFT_TIER_AMOUNT_LOW` | Optional tier overrides (USD) |
 
 ### Auth0 Setup (30 min)
 1. Go to manage.auth0.com → Create Application → Single Page App
@@ -73,7 +95,20 @@ PORT=3001
 3. Set Allowed Callback URLs: `http://localhost:5173`
 4. Set Allowed Logout URLs: `http://localhost:5173`
 5. Set Allowed Web Origins: `http://localhost:5173`
-6. Copy Domain and Client ID to `.env` and to `src/main.jsx`
+6. Copy Domain and Client ID to `.env` and to `src/main.jsx`:
+```jsx
+// src/main.jsx
+<Auth0Provider
+  domain="YOUR_AUTH0_DOMAIN"
+  clientId="YOUR_AUTH0_CLIENT_ID"
+  authorizationParams={{
+    redirect_uri: window.location.origin,
+    audience: "https://alibi-api",
+  }}
+>
+  <App />
+</Auth0Provider>
+```
 
 ### MongoDB Atlas Setup (15 min)
 1. Go to mongodb.com/atlas → Free tier → Create cluster
@@ -81,63 +116,26 @@ PORT=3001
 3. Create database user
 4. Copy connection string to `.env`
 
-### Run backend
+### Google OAuth Setup (for Gmail drafts)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a project → **APIs & Services** → enable **Gmail API**
+3. **OAuth consent screen** → External → add your email as test user
+4. **Credentials** → **OAuth 2.0 Client ID** → Application type: **Web application**
+5. Add Authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
+6. Copy **Client ID** and **Client Secret** into `backend/.env`
+
+**Link your Google account** (after starting the backend):
 ```bash
-cd backend && npx tsx server.js
+open http://localhost:3001/api/auth/google/start
 ```
 
-### Google OAuth + Gmail draft (hackathon-simple)
-
-Tokens are kept **in memory** on the server (one demo user); restart clears the session.
-
-**1. Env (in `backend/.env`)**
-```
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
-```
-
-**2. Google Cloud Console**
-- Create a project → **APIs & Services** → enable **Gmail API**.
-- **OAuth consent screen** (External / Test users as needed).
-- **Credentials** → **OAuth 2.0 Client ID** → Application type **Web application**.
-- **Authorized redirect URIs**: `http://localhost:3001/api/auth/google/callback` (must match `GOOGLE_REDIRECT_URI` exactly).
-
-**3. Connect**
-1. Start the backend, then open: `http://localhost:3001/api/auth/google/start`
-2. Complete Google consent; you should see: *Google connected — you can close this tab.*
-
-**4. Check status**
+**Check status**:
 ```bash
 curl http://localhost:3001/api/auth/status
 ```
-Expect `{ "ok": true, "connected": true }` after linking.
 
-**5. Create a draft (not send)**
-```bash
-curl -X POST http://localhost:3001/api/send-apology-email \
-  -H "Content-Type: application/json" \
-  -d '{"to":"you@gmail.com","subject":"Hello","body":"Draft body"}'
-```
-If not connected: `401` with `{ "ok": false, "error": "NOT_AUTHENTICATED" }`.  
-Omit `to` to draft to yourself (uses the signed-in Gmail address).
-
-### Tremendous gifting (sandbox)
-
-Add to `backend/.env`:
-```
-TREMENDOUS_API_KEY=your_sandbox_key
-TREMENDOUS_API_URL=https://testflight.tremendous.com
-TREMENDOUS_ENVIRONMENT=testflight
-FUNDING_SOURCE_ID=your_funding_source_id
-CAMPAIGN_ID=your_campaign_id
-
-# Optional tier overrides (USD)
-GIFT_TIER_AMOUNT_LOW=15
-GIFT_TIER_AMOUNT_MEDIUM=30
-GIFT_TIER_AMOUNT_HIGH=75
-GIFT_TIER_AMOUNT_EXTREME=150
-```
+### Tremendous Gifting (sandbox)
 
 Tier mapping used by backend:
 - score `<= 0` → skip gift
@@ -160,12 +158,53 @@ curl -X POST http://localhost:3001/api/send-gift \
 
 `failure_id` is reused as Tremendous `external_id` for idempotency.
 
-### Testing endpoints
-```bash
-# Health check
-curl http://localhost:3001/health
+---
 
-# Test agent (need JWT — use Auth0 test token from dashboard)
+## Project Structure
+
+```
+yhack2026/
+├── agent/              # AI agent logic (TypeScript, Claude tool-use loop)
+│   └── testHarness.ts  # Standalone agent test runner
+├── backend/            # Express API server
+│   ├── server.js       # Entry point (port 3001)
+│   ├── routes/         # API route handlers
+│   ├── controllers/    # Business logic
+│   └── services/       # Gmail, Tremendous, etc.
+├── frontend/           # React + Vite UI
+│   ├── src/
+│   │   └── components/ # React components (KnightScene, forms, etc.)
+│   └── public/         # Static assets (3D models, etc.)
+├── package.json        # Root — agent test harness
+└── tsconfig.json
+```
+
+---
+
+## Testing the Agent Standalone
+
+```bash
+# From project root
+npm run dev
+```
+
+This runs `agent/testHarness.ts` directly via `tsx` — no server required.
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Health check |
+| `GET` | `/api/auth/google/start` | Begin Google OAuth flow |
+| `GET` | `/api/auth/status` | Check if Google is connected |
+| `POST` | `/api/send-apology-email` | Create Gmail draft with apology |
+| `POST` | `/api/run-agent` | Run the full Alibi agent |
+| `POST` | `/api/send-gift` | Send gift card via Tremendous |
+
+**Test agent API (need JWT — use Auth0 test token from dashboard)**:
+```bash
 curl -X POST http://localhost:3001/api/run-agent \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TEST_JWT" \
@@ -174,67 +213,11 @@ curl -X POST http://localhost:3001/api/run-agent \
 
 ---
 
-## Person 3 — Frontend & Demo
-**File: `src/App.jsx`**
+## Tech Stack
 
-### Setup
-```bash
-npm create vite@latest alibi-frontend -- --template react
-cd alibi-frontend
-npm install @auth0/auth0-react
-# Copy App.jsx into src/
-```
-
-### Auth0 frontend config
-Edit `src/main.jsx`:
-```jsx
-import { Auth0Provider } from '@auth0/auth0-react';
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <Auth0Provider
-    domain="YOUR_AUTH0_DOMAIN"        // from Person 2
-    clientId="YOUR_AUTH0_CLIENT_ID"   // from Person 2
-    authorizationParams={{
-      redirect_uri: window.location.origin,
-      audience: "https://alibi-api",
-    }}
-  >
-    <App />
-  </Auth0Provider>
-);
-```
-
-### Run frontend
-```bash
-npm run dev
-# Runs at http://localhost:5173
-```
-
-### Demo checklist for presentation
-- [ ] Pre-fill form with a real confession (practice this)
-- [ ] Make sure all 6 steps animate in real time
-- [ ] "Draft in Gmail" button actually creates a draft
-- [ ] "Add to Calendar" button actually creates the event
-- [ ] Have a backup screenshot in case WiFi dies
-
----
-
-## Full Stack Run (all 3 together)
-```bash
-# Terminal 1 — Backend
-cd alibi && node server.js
-
-# Terminal 2 — Frontend  
-cd alibi-frontend && npm run dev
-
-# Open http://localhost:5173
-```
-
----
-
-## Prize Submission Checklist
-- [ ] Devpost submission with demo video
-- [ ] GitHub repo with commits during hackathon hours (11am Sat – 11am Sun)
-- [ ] All team members checked in at OC Marsh
-- [ ] At least 1 member present for judging Sunday
-- [ ] Select tracks: Personal AI Agents, Most Creative, Best UI/UX
+- **Frontend**: React 18, Vite, Three.js / React Three Fiber
+- **Backend**: Node.js, Express 5, Mongoose
+- **AI**: Anthropic Claude (tool-use agentic loop)
+- **Auth**: Google OAuth 2.0
+- **Integrations**: Gmail API, Tremendous Gifting API
+- **Database**: MongoDB (Mongoose)
