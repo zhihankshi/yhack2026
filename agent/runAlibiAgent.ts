@@ -1,13 +1,16 @@
 import crypto from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { shouldPauseForUserInput } from "./incident.js";
+import { shouldPausePipeline } from "./incident.js";
+import type { PerceptionContext } from "./perceptionContext.js";
 import { initState, type RepairState } from "./state.js";
 import {
+  perceptionFallback,
   researchFallback,
   reasonFallback,
   writeFallback,
   extractOptionalName,
 } from "./repairFallbacks.js";
+import { perceptionStep } from "./steps/perception.js";
 import { researchStep } from "./steps/research.js";
 import { reasonStep } from "./steps/reason.js";
 import { writeStep } from "./steps/write.js";
@@ -72,6 +75,17 @@ function buildGiftLinks(research: ResearchOut): string[] {
   return out;
 }
 
+/** Prefer calendar next-free window for follow-up when valid; else research suggestion. */
+function resolveFollowUpDays(state: RepairState, researchDays: number): number {
+  const iso = state.perceptionContext?.calendar?.nextFreeWindowISO;
+  if (!iso) return researchDays;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return researchDays;
+  const fromNow = Math.ceil((t - Date.now()) / 86400000);
+  if (fromNow < 1) return researchDays;
+  return Math.min(Math.max(fromNow, 1), 30);
+}
+
 function repairStateToResponse(
   state: RepairState,
   meta: {
@@ -86,7 +100,10 @@ function repairStateToResponse(
   const research = state.research!;
   const reasoning = state.reasoning!;
   const writing = state.writing!;
-  const days = research.followUpWindowSuggestion.daysFromNow;
+  const days = resolveFollowUpDays(
+    state,
+    research.followUpWindowSuggestion.daysFromNow
+  );
 
   const apologyBlock = [
     writing.apologyMessage.trim(),
@@ -166,7 +183,10 @@ function repairStateToResponse(
   };
 }
 
-export async function runAlibiAgent(input: string): Promise<RunAgentResponse> {
+export async function runAlibiAgent(
+  input: string,
+  perceptionContext?: PerceptionContext
+): Promise<RunAgentResponse> {
   const runId = crypto.randomUUID();
 
   try {
@@ -174,8 +194,19 @@ export async function runAlibiAgent(input: string): Promise<RunAgentResponse> {
     const logs: string[] = [];
     const stepTimingsMs = { research: 0, reason: 0, write: 0 };
 
-    let state = initState(input);
+    let state = initState(input, perceptionContext);
     state = { ...state, runId };
+
+    try {
+      const t0 = performance.now();
+      state = await perceptionStep(state);
+      const perceptionMs = Math.round(performance.now() - t0);
+      logs.push(`perception: ok (${perceptionMs}ms)`);
+    } catch (e) {
+      usedFallback = true;
+      state = perceptionFallback(state);
+      logs.push(`perception: fallback — ${errMsg(e)}`);
+    }
 
     try {
       const t0 = performance.now();
@@ -188,7 +219,7 @@ export async function runAlibiAgent(input: string): Promise<RunAgentResponse> {
       logs.push(`research: fallback — ${errMsg(e)}`);
     }
 
-    const paused = shouldPauseForUserInput(state);
+    const paused = shouldPausePipeline(state);
 
     if (paused) {
       state = reasonFallback(state);

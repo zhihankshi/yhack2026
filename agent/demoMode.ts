@@ -3,6 +3,14 @@ export function isDemoMode(): boolean {
   return process.env.DEMO_MODE === "true";
 }
 
+/** Appended to perception system prompt in demo mode. */
+export function perceptionDemoSuffix(): string {
+  if (!isDemoMode()) return "";
+  return `
+
+DEMO MODE: Keep situationSummary to 2 sentences. signals: at most 4 items. assumptions/missingInfo: at most 2 each.`;
+}
+
 /** Appended to research system prompt in demo mode. */
 export function researchDemoSuffix(): string {
   if (!isDemoMode()) return "";

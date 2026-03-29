@@ -3,8 +3,23 @@ import type {
   ReasonOut,
   WriteOut,
   AlibiPolicy,
+  PerceptionOut,
 } from "./schemas.js";
 import type { RepairState } from "./state.js";
+
+export function perceptionFallback(state: RepairState): RepairState {
+  const perception: PerceptionOut = {
+    situationSummary:
+      "The user described a repair scenario; details come only from their message (perception step used a safe default).",
+    signals: ["Parsed from incident text without external mail/calendar claims."],
+    confidence: { relationship: 0.5, stakes: 0.55, tone: 0.5 },
+    assumptions: ["The user wants to apologize and rebuild trust."],
+    missingInfo: ["Full relationship context may be incomplete."],
+    clarifyingQuestions: [],
+    constraints: { hrSafe: true, urgencyHours: 48 },
+  };
+  return { ...state, perception };
+}
 
 export function researchFallback(state: RepairState): RepairState {
   const research: ResearchOut = {

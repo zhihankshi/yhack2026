@@ -1,4 +1,5 @@
-import type { ReasonOut, ResearchOut, WriteOut } from "./schemas.js";
+import type { PerceptionContext } from "./perceptionContext.js";
+import type { PerceptionOut, ReasonOut, ResearchOut, WriteOut } from "./schemas.js";
 
 export type LogEntry = { step: string; msg: string };
 
@@ -44,6 +45,8 @@ export type RepairState = {
   status: RepairStatus;
   runId: string;
   stepTimings: StepTimingsState;
+  perception?: PerceptionOut;
+  perceptionContext?: PerceptionContext;
   research?: ResearchOut;
   reasoning?: ReasonOut;
   writing?: WriteOut;
@@ -54,7 +57,10 @@ export type RepairState = {
   logs: LogEntry[];
 };
 
-export function initState(input: string): RepairState {
+export function initState(
+  input: string,
+  perceptionContext?: PerceptionContext
+): RepairState {
   const runStartedAt = new Date().toISOString();
   return {
     input,
@@ -67,6 +73,8 @@ export function initState(input: string): RepairState {
       totalDurationMs: 0,
       steps: [],
     },
+    perception: undefined,
+    perceptionContext,
     research: undefined,
     reasoning: undefined,
     writing: undefined,

@@ -3,6 +3,7 @@ import { researchDemoSuffix } from "../demoMode.js";
 import { callLLMJson } from "../llmJson.js";
 import { researchOutSchema, type ResearchOut } from "../schemas.js";
 import type { RepairState } from "../state.js";
+import { formatPerceptionBlock } from "./perception.js";
 
 const SYSTEM = `You are a research assistant for relationship "repair" gift planning.
 Output a single JSON object matching the requested schema.
@@ -18,7 +19,8 @@ purchaseLink rules: omit purchaseLink unless it is (a) a generic search URL such
 CRITICAL: Do NOT claim you verified stock, pricing, or shipping. You have NOT checked real availability.`;
 
 export async function researchStep(state: RepairState): Promise<RepairState> {
-  const user = `Scenario:\n${state.input}\n\nReturn JSON for: clarifyingQuestions, inferredInterests, giftIdeas (title, priceRange, whyItFits, searchQuery as Google-pastable query, purchaseLink only per system rules or omit), followUpWindowSuggestion.`;
+  const perceptionSection = formatPerceptionBlock(state);
+  const user = `Scenario:\n${state.input}\n\n${perceptionSection ? `${perceptionSection}\n\n` : ""}Return JSON for: clarifyingQuestions, inferredInterests, giftIdeas (title, priceRange, whyItFits, searchQuery as Google-pastable query, purchaseLink only per system rules or omit), followUpWindowSuggestion. Use perception constraints (budget, urgency, location) when shaping searchQuery and priceRange.`;
 
   const research: ResearchOut = await callLLMJson(
     researchOutSchema,
