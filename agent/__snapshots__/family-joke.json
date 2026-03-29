@@ -1,5 +1,5 @@
 {
-  "runId": "d66c866c-ebbd-4f83-875c-4a273b149fbb",
+  "runId": "16ff54c4-d2e8-42c5-b674-2879a497b92a",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,13 +54,14 @@
   },
   "writing": {
     "subject": "Re: late reply",
-    "apologyMessage": "I want to sincerely apologize for the joke I made about your family at the party. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers as a gesture of goodwill. Please let me know if that would be okay.",
-    "followUpMessage": "I just wanted to check in and see how you're feeling. I'm here whenever you're ready to talk."
+    "apologyMessage": "Hi,\n\nI'm sorry for what happened and how it affected you.",
+    "followUpMessage": "Hi,\n\nI'm checking in because I meant what I said. If you're open to it, I'd like to make this right.",
+    "optionalLightFraming": "I'm not looking to make excuses—I own this."
   },
   "actions": {
     "email": {
       "subject": "Re: late reply",
-      "body": "I want to sincerely apologize for the joke I made about your family at the party. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers as a gesture of goodwill. Please let me know if that would be okay.\n\n—\n\nI just wanted to check in and see how you're feeling. I'm here whenever you're ready to talk.",
+      "body": "Hi,\n\nI'm sorry for what happened and how it affected you.\n\nI'm not looking to make excuses—I own this.\n\n—\n\nHi,\n\nI'm checking in because I meant what I said. If you're open to it, I'd like to make this right.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -81,12 +82,13 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 2535
+      "write": 0
     },
     "logs": [
-      "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
-      "reason: fallback — Unterminated string in JSON at position 505",
-      "write: ok"
+      "perception: fallback — LAVA_API_KEY is required — set it in your environment or .env",
+      "research: fallback — LAVA_API_KEY is required — set it in your environment or .env",
+      "reason: fallback — LAVA_API_KEY is required — set it in your environment or .env",
+      "write: fallback — LAVA_API_KEY is required — set it in your environment or .env"
     ]
   }
 }

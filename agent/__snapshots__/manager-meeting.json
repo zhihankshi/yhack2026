@@ -1,5 +1,5 @@
 {
-  "runId": "89e97a58-2721-4046-97bc-6046aa3f8cde",
+  "runId": "acea929f-a5b6-48fa-ac60-5dcaef3cfb18",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,14 +54,14 @@
   },
   "writing": {
     "subject": "Re: missed meeting",
-    "apologyMessage": "I apologize for missing our meeting. I mismanaged my schedule and understand that this may have caused inconvenience for you. I value our time together and would like to reschedule at your earliest convenience. Please let me know what works for you.",
-    "followUpMessage": "I wanted to check in and see if you had a chance to think about rescheduling our meeting. I'm here to accommodate your availability.",
-    "optionalLightFraming": "I appreciate your understanding as I work to make this right."
+    "apologyMessage": "Hi,\n\nI'm sorry I let you down and wasted your time.",
+    "followUpMessage": "Hi,\n\nI'll follow your lead on timing. When it makes sense, I'd like to show you I'll be more reliable.",
+    "optionalLightFraming": "I didn't treat your time with the respect it deserves. Going forward I'll flag conflicts earlier and keep my commitments—or renegotiate before the meeting, not after."
   },
   "actions": {
     "email": {
       "subject": "Re: missed meeting",
-      "body": "I apologize for missing our meeting. I mismanaged my schedule and understand that this may have caused inconvenience for you. I value our time together and would like to reschedule at your earliest convenience. Please let me know what works for you.\n\nI appreciate your understanding as I work to make this right.\n\n—\n\nI wanted to check in and see if you had a chance to think about rescheduling our meeting. I'm here to accommodate your availability.",
+      "body": "Hi,\n\nI'm sorry I let you down and wasted your time.\n\nI didn't treat your time with the respect it deserves. Going forward I'll flag conflicts earlier and keep my commitments—or renegotiate before the meeting, not after.\n\n—\n\nHi,\n\nI'll follow your lead on timing. When it makes sense, I'd like to show you I'll be more reliable.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -82,12 +82,13 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 2467
+      "write": 0
     },
     "logs": [
-      "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
-      "reason: fallback — Unterminated string in JSON at position 531",
-      "write: ok"
+      "perception: fallback — LAVA_API_KEY is required — set it in your environment or .env",
+      "research: fallback — LAVA_API_KEY is required — set it in your environment or .env",
+      "reason: fallback — LAVA_API_KEY is required — set it in your environment or .env",
+      "write: fallback — LAVA_API_KEY is required — set it in your environment or .env"
     ]
   }
 }
