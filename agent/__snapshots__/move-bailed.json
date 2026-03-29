@@ -1,5 +1,5 @@
 {
-  "runId": "2d3e1ec9-d373-40cf-a6f8-feebb2d44254",
+  "runId": "50c88cd7-e7b3-4327-9844-818db29f8b26",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,13 +54,14 @@
   },
   "writing": {
     "subject": "Re: other",
-    "apologyMessage": "I'm really sorry for bailing on helping you move. I know that my last-minute change affected your plans. I’d like to send you a small gift, like a premium chocolate box, to show my appreciation for your understanding.",
-    "followUpMessage": "Just checking in to see how you're feeling about everything. If there's anything else I can do to make it right, please let me know."
+    "apologyMessage": "I'm really sorry for bailing on helping you move. I know it was important, and I regret not being there. I’d like to send you a small gift, like a premium chocolate box, to show my appreciation for your understanding.",
+    "followUpMessage": "I hope you're doing okay. If there's anything else you need or if you'd like to talk, I'm here.",
+    "optionalLightFraming": "Work commitments unexpectedly came up."
   },
   "actions": {
     "email": {
       "subject": "Re: other",
-      "body": "I'm really sorry for bailing on helping you move. I know that my last-minute change affected your plans. I’d like to send you a small gift, like a premium chocolate box, to show my appreciation for your understanding.\n\n—\n\nJust checking in to see how you're feeling about everything. If there's anything else I can do to make it right, please let me know.",
+      "body": "I'm really sorry for bailing on helping you move. I know it was important, and I regret not being there. I’d like to send you a small gift, like a premium chocolate box, to show my appreciation for your understanding.\n\nWork commitments unexpectedly came up.\n\n—\n\nI hope you're doing okay. If there's anything else you need or if you'd like to talk, I'm here.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -81,11 +82,11 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 3371
+      "write": 1527
     },
     "logs": [
-      "research: fallback — Expected ',' or '}' after property value in JSON at position 696",
-      "reason: fallback — Unterminated string in JSON at position 503",
+      "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
+      "reason: fallback — Unterminated string in JSON at position 510",
       "write: ok"
     ]
   }

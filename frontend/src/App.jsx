@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useTTS } from "./hooks/useTTS.js";
 import { GOLDEN_PATH_RESULT } from "./data/goldenPath.js";
@@ -57,6 +57,11 @@ const STEPS_META = {
     color: T.green,
   },
 };
+
+/** Client-only pacing for the loading screen (steps 1→5); step 6 runs until the agent returns. */
+const FAKE_STEP_DWELL_MS = 850;
+/** Demo: extra pause on the final step before showing the golden-path result. */
+const DEMO_FINAL_HOLD_MS = 1200;
 
 // ─── Form Constants ───────────────────────────────────────────────────────────
 const RELATIONSHIP_OPTIONS = [
@@ -356,8 +361,8 @@ function MetaPill({ label, value, color }) {
 }
 
 // ─── Progress Panel ───────────────────────────────────────────────────────────
-function ProgressPanel({ steps, currentStep }) {
-  const done = new Set(steps.map((s) => s.tool).filter(Boolean));
+function ProgressPanel({ completedKeys, currentStep }) {
+  const done = new Set(completedKeys);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       {Object.entries(STEPS_META).map(([key, meta], i) => {
@@ -1397,8 +1402,11 @@ function AppCore({ auth }) {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState("landing");
-  const [steps, setSteps] = useState([]);
+  /** Ordered tool ids finished before `currentStep` (active step is not included). */
+  const [completedStepKeys, setCompletedStepKeys] = useState([]);
   const [currentStep, setCurrentStep] = useState(null);
+  const runningStepRef = useRef(null);
+  const fakeRunTimersRef = useRef([]);
   const [result, setResult] = useState(null);
   const [failureId, setFailureId] = useState(null);
   const [toast, setToast] = useState(null);
@@ -1412,38 +1420,84 @@ function AppCore({ auth }) {
   const actL = (k, v) => setActionLoading((s) => ({ ...s, [k]: v }));
   const actD = (k) => setActionDone((s) => ({ ...s, [k]: true }));
 
+  const applyAgentStep = useCallback((tool) => {
+    const prev = runningStepRef.current;
+    runningStepRef.current = tool;
+    if (prev) setCompletedStepKeys((c) => [...c, prev]);
+    setCurrentStep(tool);
+  }, []);
+
+  const finalizeRunningSteps = useCallback(() => {
+    setCompletedStepKeys((c) =>
+      runningStepRef.current ? [...c, runningStepRef.current] : c
+    );
+    runningStepRef.current = null;
+    setCurrentStep(null);
+  }, []);
+
+  const clearFakeRunTimers = useCallback(() => {
+    fakeRunTimersRef.current.forEach((id) => clearTimeout(id));
+    fakeRunTimersRef.current = [];
+  }, []);
+
+  /** Marks every step done (e.g. agent finished before the fake timeline caught up). */
+  const forceAllStepsComplete = useCallback(() => {
+    runningStepRef.current = null;
+    setCompletedStepKeys(Object.keys(STEPS_META));
+    setCurrentStep(null);
+  }, []);
+
+  /** Drives the loading list on a fixed timer; step 6 stays active until `agent_complete`. */
+  const startFakeLoadingProgress = useCallback(() => {
+    clearFakeRunTimers();
+    const keys = Object.keys(STEPS_META);
+    if (keys.length === 0) return;
+    applyAgentStep(keys[0]);
+    for (let i = 1; i < keys.length; i++) {
+      const id = setTimeout(() => applyAgentStep(keys[i]), FAKE_STEP_DWELL_MS * i);
+      fakeRunTimersRef.current.push(id);
+    }
+  }, [applyAgentStep, clearFakeRunTimers]);
+
   // ── Demo run ───────────────────────────────────────────────────────────────
   const runDemo = useCallback(() => {
     setPhase("running");
-    setSteps([]);
+    clearFakeRunTimers();
+    runningStepRef.current = null;
+    setCompletedStepKeys([]);
     setCurrentStep(null);
     setResult(null);
     setActionDone({});
 
     const keys = Object.keys(STEPS_META);
-    keys.forEach((key, i) => {
-      setTimeout(() => {
-        setCurrentStep(key);
-        setSteps((s) => [...s, { tool: key, step_number: i + 1 }]);
-        if (i === keys.length - 1) {
-          setTimeout(() => {
-            setCurrentStep(null);
-            setResult(GOLDEN_PATH_RESULT);
-            setFailureId("demo-run-001");
-            setPhase("result");
-          }, 1300);
-        }
-      }, i * 1050);
-    });
-  }, []);
+    applyAgentStep(keys[0]);
+    for (let i = 1; i < keys.length; i++) {
+      const id = setTimeout(() => applyAgentStep(keys[i]), FAKE_STEP_DWELL_MS * i);
+      fakeRunTimersRef.current.push(id);
+    }
+    const doneId = setTimeout(() => {
+      finalizeRunningSteps();
+      setResult(GOLDEN_PATH_RESULT);
+      setFailureId("demo-run-001");
+      setPhase("result");
+    }, FAKE_STEP_DWELL_MS * (keys.length - 1) + DEMO_FINAL_HOLD_MS);
+    fakeRunTimersRef.current.push(doneId);
+  }, [
+    applyAgentStep,
+    finalizeRunningSteps,
+    clearFakeRunTimers,
+  ]);
 
   // ── Real submit ────────────────────────────────────────────────────────────
   async function submitForm(formData) {
     setPhase("running");
-    setSteps([]);
+    clearFakeRunTimers();
+    runningStepRef.current = null;
+    setCompletedStepKeys([]);
     setCurrentStep(null);
     setResult(null);
     setActionDone({});
+    startFakeLoadingProgress();
 
     try {
       const headers = { "Content-Type": "application/json" };
@@ -1468,29 +1522,32 @@ function AppCore({ auth }) {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let sseBuffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const lines = decoder
-          .decode(value, { stream: true })
-          .split("\n")
-          .filter((l) => l.startsWith("data: "));
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lineParts = sseBuffer.split("\n");
+        sseBuffer = lineParts.pop() ?? "";
 
-        for (const line of lines) {
+        for (const line of lineParts) {
+          const trimmed = line.replace(/\r$/, "");
+          if (!trimmed.startsWith("data: ")) continue;
           try {
-            const ev = JSON.parse(line.slice(6));
-            if (ev.type === "agent_step") {
-              setCurrentStep(ev.tool);
-              setSteps((s) => [...s, ev]);
-            }
+            const ev = JSON.parse(trimmed.slice(6));
             if (ev.type === "agent_complete") {
+              clearFakeRunTimers();
+              forceAllStepsComplete();
               setResult(ev.result);
               setFailureId(ev.failure_id);
-              setCurrentStep(null);
               setPhase("result");
             }
             if (ev.type === "agent_error") {
+              clearFakeRunTimers();
+              runningStepRef.current = null;
+              setCompletedStepKeys([]);
+              setCurrentStep(null);
               showToast(`Agent error: ${ev.message}`, "error");
               setPhase("form");
             }
@@ -1499,7 +1556,34 @@ function AppCore({ auth }) {
           }
         }
       }
+
+      if (sseBuffer.trim()) {
+        const trimmed = sseBuffer.replace(/\r$/, "");
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const ev = JSON.parse(trimmed.slice(6));
+            if (ev.type === "agent_complete") {
+              clearFakeRunTimers();
+              forceAllStepsComplete();
+              setResult(ev.result);
+              setFailureId(ev.failure_id);
+              setPhase("result");
+            }
+            if (ev.type === "agent_error") {
+              clearFakeRunTimers();
+              runningStepRef.current = null;
+              setCompletedStepKeys([]);
+              setCurrentStep(null);
+              showToast(`Agent error: ${ev.message}`, "error");
+              setPhase("form");
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+      }
     } catch {
+      clearFakeRunTimers();
       showToast("Backend unreachable — switching to demo mode.", "warning");
       setTimeout(runDemo, 500);
     }
@@ -1596,7 +1680,9 @@ function AppCore({ auth }) {
             onClick={() => {
               setPhase(isAuthenticated ? "form" : "landing");
               setResult(null);
-              setSteps([]);
+              runningStepRef.current = null;
+              setCompletedStepKeys([]);
+              setCurrentStep(null);
             }}
             style={{
               background: "none",
@@ -1774,7 +1860,10 @@ function AppCore({ auth }) {
                   boxShadow: T.shadow,
                 }}
               >
-                <ProgressPanel steps={steps} currentStep={currentStep} />
+                <ProgressPanel
+                  completedKeys={completedStepKeys}
+                  currentStep={currentStep}
+                />
               </div>
             </div>
           )}
@@ -1880,7 +1969,9 @@ function AppCore({ auth }) {
                 onClick={() => {
                   setPhase("form");
                   setResult(null);
-                  setSteps([]);
+                  runningStepRef.current = null;
+                  setCompletedStepKeys([]);
+                  setCurrentStep(null);
                   setActionDone({});
                   setActionLoading({});
                 }}

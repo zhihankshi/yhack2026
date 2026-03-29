@@ -1,5 +1,5 @@
 {
-  "runId": "5255c518-f5e3-43d2-9371-cf1c6cae57f3",
+  "runId": "6120fdfe-b61f-4c64-8327-95b822271ad0",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,13 +54,13 @@
   },
   "writing": {
     "subject": "Re: forgot anniversary",
-    "apologyMessage": "I'm really sorry for forgetting our anniversary dinner reservation. I understand how disappointing that must have been for you. I want to make it right by planning a special dinner this weekend. Please let me know what you need to feel respected.",
-    "followUpMessage": "I hope you're feeling a bit better. I'm still here and would love to talk when you're ready."
+    "apologyMessage": "I'm really sorry for forgetting our anniversary dinner reservation. I understand how upsetting that must have been for you. I want to make it right by planning a special dinner this weekend. Please let me know what you need from me to feel respected.",
+    "followUpMessage": "I just wanted to check in and see how you're feeling. I'm here when you're ready to talk."
   },
   "actions": {
     "email": {
       "subject": "Re: forgot anniversary",
-      "body": "I'm really sorry for forgetting our anniversary dinner reservation. I understand how disappointing that must have been for you. I want to make it right by planning a special dinner this weekend. Please let me know what you need to feel respected.\n\n—\n\nI hope you're feeling a bit better. I'm still here and would love to talk when you're ready.",
+      "body": "I'm really sorry for forgetting our anniversary dinner reservation. I understand how upsetting that must have been for you. I want to make it right by planning a special dinner this weekend. Please let me know what you need from me to feel respected.\n\n—\n\nI just wanted to check in and see how you're feeling. I'm here when you're ready to talk.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -81,11 +81,11 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 1936
+      "write": 1633
     },
     "logs": [
       "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
-      "reason: fallback — Unterminated string in JSON at position 521",
+      "reason: fallback — Unterminated string in JSON at position 525",
       "write: ok"
     ]
   }

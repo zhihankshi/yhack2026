@@ -1,5 +1,5 @@
 {
-  "runId": "f64e7eef-d100-45e9-a8d4-e50cda3b57eb",
+  "runId": "d66c866c-ebbd-4f83-875c-4a273b149fbb",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,13 +54,13 @@
   },
   "writing": {
     "subject": "Re: late reply",
-    "apologyMessage": "I’m really sorry for the joke I made about your family. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers to show I care and respect your feelings.",
-    "followUpMessage": "I hope you’re doing okay. If you’re ready to talk, I’m here to listen and understand how you feel."
+    "apologyMessage": "I want to sincerely apologize for the joke I made about your family at the party. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers as a gesture of goodwill. Please let me know if that would be okay.",
+    "followUpMessage": "I just wanted to check in and see how you're feeling. I'm here whenever you're ready to talk."
   },
   "actions": {
     "email": {
       "subject": "Re: late reply",
-      "body": "I’m really sorry for the joke I made about your family. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers to show I care and respect your feelings.\n\n—\n\nI hope you’re doing okay. If you’re ready to talk, I’m here to listen and understand how you feel.",
+      "body": "I want to sincerely apologize for the joke I made about your family at the party. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers as a gesture of goodwill. Please let me know if that would be okay.\n\n—\n\nI just wanted to check in and see how you're feeling. I'm here whenever you're ready to talk.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -81,11 +81,11 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 2052
+      "write": 2535
     },
     "logs": [
       "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
-      "reason: fallback — Unterminated string in JSON at position 500",
+      "reason: fallback — Unterminated string in JSON at position 505",
       "write: ok"
     ]
   }

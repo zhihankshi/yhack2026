@@ -1,5 +1,5 @@
 {
-  "runId": "a6aeef1a-2d54-4aff-903f-4b01d741c555",
+  "runId": "2c5d80dd-f4f6-4126-8767-20ea76254edf",
   "ok": true,
   "status": "ready_to_act",
   "input": {
@@ -54,13 +54,13 @@
   },
   "writing": {
     "subject": "Re: forgot birthday",
-    "apologyMessage": "I'm really sorry for forgetting your birthday, Sam. I want to make it up to you with a small gift. Please let me know what you would like to feel appreciated.",
-    "followUpMessage": "I hope you're doing well, Sam. Just checking in to see if you had any thoughts on what would make you feel respected after my oversight."
+    "apologyMessage": "I'm really sorry for forgetting your birthday, Sam. I want to make it up to you with a small gift. Please let me know what you need to feel respected.",
+    "followUpMessage": "I hope you're doing well, Sam. I just wanted to check in and see if you received my message."
   },
   "actions": {
     "email": {
       "subject": "Re: forgot birthday",
-      "body": "I'm really sorry for forgetting your birthday, Sam. I want to make it up to you with a small gift. Please let me know what you would like to feel appreciated.\n\n—\n\nI hope you're doing well, Sam. Just checking in to see if you had any thoughts on what would make you feel respected after my oversight.",
+      "body": "I'm really sorry for forgetting your birthday, Sam. I want to make it up to you with a small gift. Please let me know what you need to feel respected.\n\n—\n\nI hope you're doing well, Sam. I just wanted to check in and see if you received my message.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
@@ -81,11 +81,11 @@
     "stepTimingsMs": {
       "research": 0,
       "reason": 0,
-      "write": 1431
+      "write": 1598
     },
     "logs": [
       "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
-      "reason: fallback — Unterminated string in JSON at position 526",
+      "reason: fallback — Unterminated string in JSON at position 504",
       "write: ok"
     ]
   }
