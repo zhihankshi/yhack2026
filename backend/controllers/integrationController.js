@@ -169,6 +169,7 @@ async function sendTremendousGift(req, res) {
       ai_evaluation_score,
       external_id,
       failure_id,
+      apology_message,
     } = req.body || {};
 
     if (ai_evaluation_score === undefined || ai_evaluation_score === null) {
@@ -183,6 +184,7 @@ async function sendTremendousGift(req, res) {
       recipientEmail: recipient_email,
       aiEvaluationScore: ai_evaluation_score,
       externalId: external_id || failure_id,
+      message: apology_message || undefined,
     });
 
     return res.status(200).json({

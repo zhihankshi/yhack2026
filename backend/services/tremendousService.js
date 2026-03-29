@@ -83,7 +83,7 @@ function buildClient() {
   });
 }
 
-async function sendGift({ recipientName, recipientEmail, aiEvaluationScore, externalId }) {
+async function sendGift({ recipientName, recipientEmail, aiEvaluationScore, externalId, message }) {
   const reward = mapScoreToReward(aiEvaluationScore);
   if (reward.amount === 0) {
     return {
@@ -116,6 +116,13 @@ async function sendGift({ recipientName, recipientEmail, aiEvaluationScore, exte
             name,
             email,
           },
+          ...(message
+            ? {
+                meta: {
+                  message: String(message).trim().slice(0, 300),
+                },
+              }
+            : {}),
         },
       },
       external_id: idempotencyId,
