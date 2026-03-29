@@ -157,7 +157,7 @@ Set `DEMO_MODE=true` (see `agent/demoMode.ts` + `agent/config.ts`) for smaller p
 
 ---
 
-## Repository map (files judges care about)
+## Repository map
 
 | Path | Purpose |
 |------|---------|
