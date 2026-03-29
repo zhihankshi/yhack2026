@@ -1,0 +1,9 @@
+# Ignore everything at root
+/*
+
+# Except the frontend folder
+!/frontend
+
+# And git/project essentials
+!.gitignore
+!README.md
