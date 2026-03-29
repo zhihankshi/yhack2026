@@ -1,11 +1,11 @@
 {
-  "runId": "479d1a35-a7ba-43b5-a0ed-a1e8f1e8d80e",
+  "runId": "f2c17408-cd11-4eb3-b359-6ecf06fe5973",
   "ok": true,
   "status": "ready_to_act",
   "input": {
-    "incident": "Forgot our anniversary dinner reservation; partner was upset and went home early.",
-    "personName": "was",
-    "relationshipType": "partner",
+    "incident": "Forgot my coworker Sarah's birthday; need a thoughtful repair message and gift idea.",
+    "personName": "",
+    "relationshipType": "coworker",
     "channelPreference": "unsure"
   },
   "research": {
@@ -30,10 +30,10 @@
         "searchQuery": "small desk plant gift delivery"
       }
     ],
-    "followUpWindowDays": 3
+    "followUpWindowDays": 1
   },
   "reasoning": {
-    "incidentType": "forgot_anniversary",
+    "incidentType": "forgot_birthday",
     "severity": "med",
     "tone": "contrite",
     "budgetRange": [
@@ -53,19 +53,19 @@
     ]
   },
   "writing": {
-    "subject": "Re: forgot anniversary",
-    "apologyMessage": "Hi was,\n\nI'm truly sorry—I messed up, and I'm sorry for the hurt it caused. I'd like to make this right; tell me what would help, or I can suggest a concrete next step on my end.",
-    "followUpMessage": "Hi was,\n\nI'll give you space. When you're ready, I'm here—no pressure to reply quickly."
+    "subject": "Re: forgot birthday",
+    "apologyMessage": "Hi,\n\nI'm truly sorry—I messed up, and I'm sorry for the hurt it caused. I'd like to make this right; tell me what would help, or I can suggest a concrete next step on my end.",
+    "followUpMessage": "Hi,\n\nI'll give you space. When you're ready, I'm here—no pressure to reply quickly."
   },
   "actions": {
     "email": {
-      "subject": "Re: forgot anniversary",
-      "body": "Hi was,\n\nI'm truly sorry—I messed up, and I'm sorry for the hurt it caused. I'd like to make this right; tell me what would help, or I can suggest a concrete next step on my end.\n\n—\n\nHi was,\n\nI'll give you space. When you're ready, I'm here—no pressure to reply quickly.",
+      "subject": "Re: forgot birthday",
+      "body": "Hi,\n\nI'm truly sorry—I messed up, and I'm sorry for the hurt it caused. I'd like to make this right; tell me what would help, or I can suggest a concrete next step on my end.\n\n—\n\nHi,\n\nI'll give you space. When you're ready, I'm here—no pressure to reply quickly.",
       "sendEndpoint": "/api/send-apology-email"
     },
     "followup": {
-      "daysFromNow": 3,
-      "title": "Follow up: forgot anniversary",
+      "daysFromNow": 1,
+      "title": "Follow up: forgot birthday",
       "notes": "• No excuses; center impact on them.\n• Keep it short.\n• Include one concrete repair action.\n• Do not invent facts or detailed alibis.\n\nPlan: Acknowledge what went wrong without deflecting. Offer one specific repair action (time, place, or gesture). Ask what they need to feel respected. Follow up once after a pause—no pressure.",
       "scheduleEndpoint": "/api/schedule-followup"
     },

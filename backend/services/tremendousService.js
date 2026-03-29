@@ -1,4 +1,4 @@
-const { Tremendous } = require("tremendous");
+const { Configuration, Environments, OrdersApi } = require("tremendous");
 
 const DEFAULT_TIER_AMOUNTS = Object.freeze({
   low: 15,
@@ -75,14 +75,6 @@ function assertTremendousEnv() {
   }
 }
 
-function buildClient() {
-  assertTremendousEnv();
-  return new Tremendous({
-    apiKey: cleanEnv("TREMENDOUS_API_KEY"),
-    environment: resolveTremendousEnvironment(),
-  });
-}
-
 async function sendGift({ recipientName, recipientEmail, aiEvaluationScore, externalId, message }) {
   const reward = mapScoreToReward(aiEvaluationScore);
   if (reward.amount === 0) {
@@ -98,48 +90,51 @@ async function sendGift({ recipientName, recipientEmail, aiEvaluationScore, exte
   if (!name) throw new Error("recipientName is required");
   if (!email) throw new Error("recipientEmail is required");
 
-  const client = buildClient();
+  assertTremendousEnv();
+
   const idempotencyId = String(externalId || `gift-${Date.now()}`).trim();
+  const apiUrl = cleanEnv("TREMENDOUS_API_URL") || "https://testflight.tremendous.com";
 
   try {
-    const order = await client.orders.create({
-      payment: {
-        funding_source_id: cleanEnv("FUNDING_SOURCE_ID"),
+    const response = await fetch(`${apiUrl}/api/v2/orders`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${cleanEnv("TREMENDOUS_API_KEY")}`,
+        "Content-Type": "application/json",
       },
-      reward: {
-        campaign_id: cleanEnv("CAMPAIGN_ID"),
-        amount: reward.amount,
-        currency_code: "USD",
-        delivery: {
-          method: "EMAIL",
-          recipient: {
-            name,
-            email,
-          },
-          ...(message
-            ? {
-                meta: {
-                  message: String(message).trim().slice(0, 300),
-                },
-              }
-            : {}),
+      body: JSON.stringify({
+        payment: {
+          funding_source_id: cleanEnv("FUNDING_SOURCE_ID"),
         },
-      },
-      external_id: idempotencyId,
+        reward: {
+          campaign_id: cleanEnv("CAMPAIGN_ID"),
+          value: {
+            denomination: reward.amount,
+            currency_code: "USD"
+          },
+          delivery: {
+            method: "EMAIL",
+            ...(message ? { meta: { message: String(message).trim().slice(0, 300) } } : {}),
+          },
+          recipient: { name, email }
+        },
+        external_id: idempotencyId,
+      }),
     });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(JSON.stringify(data.errors || data));
+    }
 
     return {
       status: "sent",
       reward,
       external_id: idempotencyId,
-      order,
+      order: data.order,
     };
   } catch (error) {
-    console.error("Tremendous API Error:", {
-      message: error?.message || String(error),
-      status: error?.response?.status,
-      data: error?.response?.data,
-    });
+    console.error("Tremendous API Error:", error?.message || error);
     throw error;
   }
 }

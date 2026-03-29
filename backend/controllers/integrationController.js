@@ -35,6 +35,7 @@ async function googleAuthCallback(req, res) {
   try {
     const code = req.query.code;
     const err = req.query.error;
+    const state = req.query.state;
 
     if (err) {
       const desc = String(req.query.error_description || "").replace(
@@ -64,6 +65,20 @@ async function googleAuthCallback(req, res) {
       return res.status(400).send("Missing authorization code");
     }
 
+    // Calendar flow — store tokens for calendar and redirect with calendar flag
+    if (state === "calendar") {
+      const { google } = require("googleapis");
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI,
+      );
+      const { tokens } = await oauth2Client.getToken(code);
+      googleTokensStore.defaultUser = tokens;
+      return res.redirect("http://localhost:5173/?google_calendar_connected=1");
+    }
+
+    // Gmail flow (default)
     await exchangeCodeForTokens(code);
 
     return res.redirect("http://localhost:5173/?google_gmail_connected=1");

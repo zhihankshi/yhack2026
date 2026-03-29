@@ -27,11 +27,11 @@ export function researchFallback(state: RepairState): RepairState {
     inferredInterests: [],
     giftIdeas: [
       {
-        title: "Same-day flowers or local florist bouquet",
-        priceRange: "$35–75",
+        title: "Artisan coffee or local pastry box delivery",
+        priceRange: "$25–45",
         whyItFits:
-          "Neutral and widely appropriate; search locally rather than guessing inventory.",
-        searchQuery: "same-day flower delivery near me",
+          "A thoughtful gesture that is universally appreciated and feels more personal than a generic item.",
+        searchQuery: "same-day artisan bakery delivery near me",
       },
       {
         title: "Premium chocolate or snack gift box",

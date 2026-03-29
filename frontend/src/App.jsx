@@ -1888,7 +1888,7 @@ function AppCore({ auth }) {
 
       if (emailRes.status === 401 && emailJson.error === "NOT_AUTHENTICATED") {
         localStorage.setItem("pendingGmailPayload", JSON.stringify(payload));
-        window.location.href = `${apiUrl}/api/auth/google/start`;
+        window.location.href = `${apiUrl}/api/auth/google/start?t=${Date.now()}`;
         return;
       }
 
@@ -1934,7 +1934,7 @@ function AppCore({ auth }) {
 
       if (res.status === 401) {
         localStorage.setItem("pendingCalendarPayload", JSON.stringify(payload));
-        window.location.href = `${apiUrl}/api/google/auth`;
+        window.location.href = `${apiUrl}/api/google/auth?t=${Date.now()}`;
         return;
       }
 

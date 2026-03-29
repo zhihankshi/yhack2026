@@ -1,6 +1,6 @@
 # The Alibi 🛡️
 
-> **AI-powered social recovery agent** — confess what you did wrong, let the AI craft the perfect apology, draft a Gmail, and send a gift card. Built at YHack 2026.
+> **AI-powered social recovery agent** — confess what you did wrong, let the AI craft the perfect apology, draft a Gmail, schedule a Calendar follow-up, and send a deeply personalized, context-aware gift card (no generic flowers!). Built at YHack 2026.
 
 ---
 
@@ -116,7 +116,7 @@ cp backend/.env.example backend/.env
 3. Create database user
 4. Copy connection string to `.env`
 
-### Google OAuth Setup (for Gmail drafts)
+### Google OAuth Setup (for Gmail & Calendar integrations)
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Create a project → **APIs & Services** → enable **Gmail API**
@@ -136,6 +136,8 @@ curl http://localhost:3001/api/auth/status
 ```
 
 ### Tremendous Gifting (sandbox)
+
+*Note: We bypass the Tremendous Node SDK to avoid versioning/type conflicts, interacting directly with their v2 REST API via native fetch.*
 
 Tier mapping used by backend:
 - score `<= 0` → skip gift
@@ -197,7 +199,8 @@ This runs `agent/testHarness.ts` directly via `tsx` — no server required.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/health` | Health check |
-| `GET` | `/api/auth/google/start` | Begin Google OAuth flow |
+| `GET` | `/api/auth/google/start` | Begin Google OAuth flow (Gmail) |
+| `GET` | `/api/google/auth` | Begin Google Calendar OAuth flow |
 | `GET` | `/api/auth/status` | Check if Google is connected |
 | `POST` | `/api/send-apology-email` | Create Gmail draft with apology |
 | `POST` | `/api/run-agent` | Run the full Alibi agent |
