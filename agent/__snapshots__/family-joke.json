@@ -1,0 +1,92 @@
+{
+  "runId": "f64e7eef-d100-45e9-a8d4-e50cda3b57eb",
+  "ok": true,
+  "status": "ready_to_act",
+  "input": {
+    "incident": "Made a joke about their family at a party; they have not texted in two days.",
+    "personName": "",
+    "relationshipType": "other",
+    "channelPreference": "text"
+  },
+  "research": {
+    "clarifyingQuestions": [],
+    "giftIdeas": [
+      {
+        "title": "Same-day flowers or local florist bouquet",
+        "priceRange": "$35–75",
+        "whyItFits": "Neutral and widely appropriate; search locally rather than guessing inventory.",
+        "searchQuery": "same-day flower delivery near me"
+      },
+      {
+        "title": "Premium chocolate or snack gift box",
+        "priceRange": "$25–50",
+        "whyItFits": "Coworker-safe when interests are unknown; easy to verify via search.",
+        "searchQuery": "premium chocolate gift box delivery"
+      },
+      {
+        "title": "Small desk plant or succulent",
+        "priceRange": "$20–45",
+        "whyItFits": "Low-risk tone; avoids strong personal taste assumptions.",
+        "searchQuery": "small desk plant gift delivery"
+      }
+    ],
+    "followUpWindowDays": 3
+  },
+  "reasoning": {
+    "incidentType": "late_reply",
+    "severity": "med",
+    "tone": "contrite",
+    "budgetRange": [
+      20,
+      50
+    ],
+    "alibiPolicy": "light_framing",
+    "plan": [
+      "Acknowledge what went wrong without deflecting.",
+      "Offer one specific repair action (time, place, or gesture).",
+      "Ask what they need to feel respected.",
+      "Follow up once after a pause—no pressure."
+    ],
+    "risks": [
+      "They may need time before responding.",
+      "Long or repeated messages can feel like pressure."
+    ]
+  },
+  "writing": {
+    "subject": "Re: late reply",
+    "apologyMessage": "I’m really sorry for the joke I made about your family. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers to show I care and respect your feelings.",
+    "followUpMessage": "I hope you’re doing okay. If you’re ready to talk, I’m here to listen and understand how you feel."
+  },
+  "actions": {
+    "email": {
+      "subject": "Re: late reply",
+      "body": "I’m really sorry for the joke I made about your family. I realize it may have hurt you, and that was not my intention. I’d like to send you some flowers to show I care and respect your feelings.\n\n—\n\nI hope you’re doing okay. If you’re ready to talk, I’m here to listen and understand how you feel.",
+      "sendEndpoint": "/api/send-apology-email"
+    },
+    "followup": {
+      "daysFromNow": 3,
+      "title": "Follow up: late reply",
+      "notes": "• No excuses; center impact on them.\n• Keep it short.\n• Include one concrete repair action.\n• Do not invent facts or detailed alibis.\n\nPlan: Acknowledge what went wrong without deflecting. Offer one specific repair action (time, place, or gesture). Ask what they need to feel respected. Follow up once after a pause—no pressure.",
+      "scheduleEndpoint": "/api/schedule-followup"
+    },
+    "giftLinks": [
+      "https://www.google.com/search?q=same-day%20flower%20delivery%20near%20me",
+      "https://www.google.com/search?q=premium%20chocolate%20gift%20box%20delivery",
+      "https://www.google.com/search?q=small%20desk%20plant%20gift%20delivery"
+    ]
+  },
+  "debug": {
+    "usedFallback": true,
+    "pausedForUserInput": false,
+    "stepTimingsMs": {
+      "research": 0,
+      "reason": 0,
+      "write": 2052
+    },
+    "logs": [
+      "research: fallback — [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"string\",\n    \"path\": [\n      \"followUpWindowSuggestion\"\n    ],\n    \"message\": \"Expected object, received string\"\n  }\n]",
+      "reason: fallback — Unterminated string in JSON at position 500",
+      "write: ok"
+    ]
+  }
+}

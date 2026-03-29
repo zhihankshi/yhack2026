@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { writeDemoSuffix } from "../demoMode.js";
 import { callLLMJson } from "../llmJson.js";
 import { writeOutSchema, type WriteOut } from "../schemas.js";
 import type { RepairState } from "../state.js";
@@ -25,7 +26,7 @@ export async function writeStep(state: RepairState): Promise<RepairState> {
     writeOutSchema,
     {
       model: config.modelWrite,
-      systemPrompt: SYSTEM,
+      systemPrompt: SYSTEM + writeDemoSuffix(),
       maxTokens: config.maxTokensWrite,
       temperature: config.temperature,
     },

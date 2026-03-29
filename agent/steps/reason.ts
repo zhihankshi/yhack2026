@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { reasonDemoSuffix } from "../demoMode.js";
 import { callLLMJson } from "../llmJson.js";
 import { reasonOutSchema, type ReasonOut } from "../schemas.js";
 import type { RepairState } from "../state.js";
@@ -31,7 +32,7 @@ export async function reasonStep(state: RepairState): Promise<RepairState> {
     reasonOutSchema,
     {
       model: config.modelFast,
-      systemPrompt: SYSTEM,
+      systemPrompt: SYSTEM + reasonDemoSuffix(),
       maxTokens: config.maxTokensReason,
       temperature: config.temperature,
     },

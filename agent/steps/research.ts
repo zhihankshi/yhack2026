@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { researchDemoSuffix } from "../demoMode.js";
 import { callLLMJson } from "../llmJson.js";
 import { researchOutSchema, type ResearchOut } from "../schemas.js";
 import type { RepairState } from "../state.js";
@@ -23,7 +24,7 @@ export async function researchStep(state: RepairState): Promise<RepairState> {
     researchOutSchema,
     {
       model: config.modelFast,
-      systemPrompt: SYSTEM,
+      systemPrompt: SYSTEM + researchDemoSuffix(),
       maxTokens: config.maxTokensResearch,
       temperature: config.temperature,
     },
