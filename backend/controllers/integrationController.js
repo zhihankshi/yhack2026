@@ -65,14 +65,7 @@ async function googleAuthCallback(req, res) {
 
     await exchangeCodeForTokens(code);
 
-    res
-      .status(200)
-      .type("html")
-      .send(
-        '<!DOCTYPE html><html><body style="font-family:system-ui;padding:2rem">' +
-          "<p><strong>Google connected</strong> — you can close this tab.</p>" +
-          "</body></html>",
-      );
+    return res.redirect("http://localhost:5173/?google_gmail_connected=1");
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("googleAuthCallback:", msg, e);

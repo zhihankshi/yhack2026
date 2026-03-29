@@ -26,7 +26,8 @@ async function googleAuthCallback(req, res) {
     const tokens = await exchangeCodeForTokens(code);
     googleTokensStore.defaultUser = tokens;
 
-    res.send("Google Calendar connected. You can close this tab.");
+    const frontendUrl = "http://localhost:5173";
+    return res.redirect(`${frontendUrl}?google_calendar_connected=1`);
   } catch (error) {
     console.error("googleAuthCallback error:", error);
     res
