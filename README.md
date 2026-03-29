@@ -1,4 +1,5 @@
-<img width="1279" height="816" alt="sir_alibi" src="https://github.com/user-attachments/assets/1a84cdfe-9467-4a56-b842-ab67365cb30b" />
+<<img width="1338" height="851" alt="image" src="https://github.com/user-attachments/assets/0d93f9af-2edb-401d-903f-2b1fb1a21c2b" />
+>
 
 # Sir Alibi 🛡️
 
