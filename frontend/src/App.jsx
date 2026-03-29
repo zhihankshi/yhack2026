@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useTTS } from "./hooks/useTTS.js";
 import { GOLDEN_PATH_RESULT } from "./data/goldenPath.js";
@@ -1413,6 +1413,213 @@ function AppCore({ auth }) {
   const [actionLoading, setActionLoading] = useState({});
   const [actionDone, setActionDone] = useState({});
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("google_calendar_connected");
+
+    if (connected !== "1") return;
+
+    const pending = localStorage.getItem("pendingCalendarPayload");
+    if (!pending) return;
+
+    const run = async () => {
+      try {
+        const apiUrl =
+          (typeof import.meta !== "undefined" &&
+            import.meta.env?.VITE_API_URL) ||
+          "http://localhost:3001";
+
+        const headers = { "Content-Type": "application/json" };
+
+        try {
+          const t = await getAccessTokenSilently();
+          if (t) headers["Authorization"] = `Bearer ${t}`;
+        } catch {}
+
+        const res = await fetch(`${apiUrl}/api/schedule-followup`, {
+          method: "POST",
+          headers,
+          body: pending,
+        });
+
+        if (!res.ok) {
+          throw new Error(`Calendar retry failed: ${res.status}`);
+        }
+
+        localStorage.removeItem("pendingCalendarPayload");
+        showToast("Follow-up added to calendar!", "success");
+        actD("followup");
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("google_calendar_connected");
+        window.history.replaceState({}, "", url.toString());
+      } catch (error) {
+        console.error("calendar retry error:", error);
+        showToast("Couldn't add follow-up to calendar.", "error");
+      }
+    };
+
+    run();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("google_gmail_connected");
+
+    if (connected !== "1") return;
+
+    const pending = localStorage.getItem("pendingGmailPayload");
+    if (!pending) return;
+
+    const run = async () => {
+      try {
+        const apiUrl =
+          (typeof import.meta !== "undefined" &&
+            import.meta.env?.VITE_API_URL) ||
+          "http://localhost:3001";
+
+        const headers = { "Content-Type": "application/json" };
+
+        try {
+          const t = await getAccessTokenSilently();
+          if (t) headers["Authorization"] = `Bearer ${t}`;
+        } catch {}
+
+        const emailRes = await fetch(`${apiUrl}/api/send-apology-email`, {
+          method: "POST",
+          headers,
+          body: pending,
+        });
+
+        const emailJson = await emailRes.json().catch(() => ({}));
+
+        if (!emailRes.ok) {
+          throw new Error(
+            emailJson.error || `Gmail retry failed: ${emailRes.status}`,
+          );
+        }
+
+        localStorage.removeItem("pendingGmailPayload");
+        actD("email");
+        showToast("Email drafted in Gmail!", "success");
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("google_gmail_connected");
+        window.history.replaceState({}, "", url.toString());
+      } catch (error) {
+        console.error("gmail retry error:", error);
+        showToast("Couldn't add Gmail draft.", "error");
+      }
+    };
+
+    run();
+  }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("google_gmail_connected");
+
+    if (connected !== "1") return;
+
+    const pending = localStorage.getItem("pendingGmailPayload");
+    if (!pending) return;
+
+    const run = async () => {
+      try {
+        const apiUrl =
+          (typeof import.meta !== "undefined" &&
+            import.meta.env?.VITE_API_URL) ||
+          "http://localhost:3001";
+
+        const headers = { "Content-Type": "application/json" };
+
+        try {
+          const t = await getAccessTokenSilently();
+          if (t) headers["Authorization"] = `Bearer ${t}`;
+        } catch {}
+
+        const emailRes = await fetch(`${apiUrl}/api/send-apology-email`, {
+          method: "POST",
+          headers,
+          body: pending,
+        });
+
+        const emailJson = await emailRes.json().catch(() => ({}));
+
+        if (!emailRes.ok) {
+          throw new Error(
+            emailJson.error || `Gmail retry failed: ${emailRes.status}`,
+          );
+        }
+
+        localStorage.removeItem("pendingGmailPayload");
+        actD("email");
+        showToast("Email drafted in Gmail!", "success");
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("google_gmail_connected");
+        window.history.replaceState({}, "", url.toString());
+      } catch (error) {
+        console.error("gmail retry error:", error);
+        showToast("Couldn't add Gmail draft.", "error");
+      }
+    };
+
+    run();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("google_gmail_connected");
+
+    if (connected !== "1") return;
+
+    const pending = localStorage.getItem("pendingGmailPayload");
+    if (!pending) return;
+
+    const run = async () => {
+      try {
+        const apiUrl =
+          (typeof import.meta !== "undefined" &&
+            import.meta.env?.VITE_API_URL) ||
+          "http://localhost:3001";
+
+        const headers = { "Content-Type": "application/json" };
+
+        try {
+          const t = await getAccessTokenSilently();
+          if (t) headers["Authorization"] = `Bearer ${t}`;
+        } catch {}
+
+        const emailRes = await fetch(`${apiUrl}/api/send-apology-email`, {
+          method: "POST",
+          headers,
+          body: pending,
+        });
+
+        const emailJson = await emailRes.json().catch(() => ({}));
+
+        if (!emailRes.ok) {
+          throw new Error(
+            emailJson.error || `Gmail retry failed: ${emailRes.status}`,
+          );
+        }
+
+        localStorage.removeItem("pendingGmailPayload");
+        actD("email");
+        showToast("Email drafted in Gmail!", "success");
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("google_gmail_connected");
+        window.history.replaceState({}, "", url.toString());
+      } catch (error) {
+        console.error("gmail retry error:", error);
+        showToast("Couldn't add Gmail draft.", "error");
+      }
+    };
+
+    run();
+  }, []);
+
   const showToast = (message, type = "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 5000);
@@ -1604,41 +1811,45 @@ function AppCore({ auth }) {
         const t = await getAccessTokenSilently();
         if (t) headers["Authorization"] = `Bearer ${t}`;
       } catch {}
+
       const apiUrl =
         (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
         "http://localhost:3001";
+
       const ps = result.apology.ps_line?.trim();
       const fu = result.followup?.followup_message?.trim();
       const includePs =
-        ps &&
-        ps !== fu &&
-        !(fu && (fu.includes(ps) || ps.includes(fu)));
-      const draftBody = [result.apology.body, includePs ? ps : ""]
-        .filter(Boolean)
-        .join("\n\n");
+        ps && ps !== fu && !(fu && (fu.includes(ps) || ps.includes(fu)));
+
+      const payload = {
+        subject: result.apology.subject,
+        body: [result.apology.body, includePs ? ps : ""]
+          .filter(Boolean)
+          .join("\n\n"),
+      };
 
       const emailRes = await fetch(`${apiUrl}/api/send-apology-email`, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          subject: result.apology.subject,
-          body: draftBody,
-        }),
+        body: JSON.stringify(payload),
       });
+
       const emailJson = await emailRes.json().catch(() => ({}));
+
       if (emailRes.status === 401 && emailJson.error === "NOT_AUTHENTICATED") {
-        showToast(
-          `Connect Google first: open ${apiUrl}/api/auth/google/start`,
-          "warning",
-        );
+        localStorage.setItem("pendingGmailPayload", JSON.stringify(payload));
+        window.location.href = `${apiUrl}/api/auth/google/start`;
         return;
       }
+
       if (!emailRes.ok) {
         throw new Error(emailJson.error || "draft failed");
       }
+
       actD("email");
       showToast("Email drafted in Gmail!", "success");
-    } catch {
+    } catch (error) {
+      console.error("gmail error:", error);
       showToast("Couldn't reach Gmail integration.", "error");
     } finally {
       actL("email", false);
@@ -1659,17 +1870,20 @@ function AppCore({ auth }) {
         (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
         "http://localhost:3001";
 
+      const payload = {
+        failure_id: failureId,
+        followup: result.followup,
+        person_name: result.research?.name,
+      };
+
       const res = await fetch(`${apiUrl}/api/schedule-followup`, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          failure_id: failureId,
-          followup: result.followup,
-          person_name: result.research?.name,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.status === 401) {
+        localStorage.setItem("pendingCalendarPayload", JSON.stringify(payload));
         window.location.href = `${apiUrl}/api/google/auth`;
         return;
       }
@@ -1683,7 +1897,8 @@ function AppCore({ auth }) {
 
       actD("followup");
       showToast("Follow-up added to calendar!", "success");
-    } catch {
+    } catch (error) {
+      console.error("calendar error:", error);
       showToast("Couldn't reach Calendar integration.", "error");
     } finally {
       actL("followup", false);
