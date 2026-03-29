@@ -4,6 +4,8 @@ import { useTTS } from "./hooks/useTTS.js";
 import { GOLDEN_PATH_RESULT } from "./data/goldenPath.js";
 import { T } from "./lib/tokens.js";
 import { MarketingHome } from "./components/MarketingHome.jsx";
+import KnightScene from "./components/KnightScene.jsx";
+import GeneratingOverlay from "./components/GeneratingOverlay.jsx";
 import { LoadingCrest } from "./components/LoadingCrest.jsx";
 
 // ─── Agent Steps Metadata ─────────────────────────────────────────────────────
@@ -924,7 +926,7 @@ function DamageCard({ assessment }) {
 }
 
 // ─── Input Form ───────────────────────────────────────────────────────────────
-function InputForm({ onSubmit, onDemo }) {
+function InputForm({ onSubmit, onDemo, onContextInput }) {
   const [form, setForm] = useState({
     name: "",
     relationship: "close friend",
@@ -1125,6 +1127,7 @@ function InputForm({ onSubmit, onDemo }) {
           placeholder="She's been stressed with deadlines lately, we've been friends 10 years…"
           value={form.additional_context}
           onChange={(e) => set("additional_context", e.target.value)}
+          onInput={(e) => onContextInput?.(e.target.value)}
           onFocus={(e) => (e.target.style.borderColor = T.gold)}
           onBlur={(e) => (e.target.style.borderColor = T.border)}
         />
@@ -1280,6 +1283,24 @@ function AppCore({ auth }) {
   const [toast, setToast] = useState(null);
   const [actionLoading, setActionLoading] = useState({});
   const [actionDone, setActionDone] = useState({});
+  const [currentCrimeLevel, setCurrentCrimeLevel] = useState("minor");
+
+  const handleContextInput = useCallback((value) => {
+    const lower = value.toLowerCase();
+    const severeHit =
+      value.length > 200 ||
+      ["betrayed", "cheated", "ghosted", "abandoned"].some((w) =>
+        lower.includes(w),
+      );
+    const moderateHit =
+      value.length > 80 ||
+      ["forgot", "cancelled", "late", "missed"].some((w) =>
+        lower.includes(w),
+      );
+    if (severeHit) setCurrentCrimeLevel("severe");
+    else if (moderateHit) setCurrentCrimeLevel("moderate");
+    else setCurrentCrimeLevel("minor");
+  }, []);
 
   const showToast = (message, type = "error") => {
     setToast({ message, type });
@@ -1434,6 +1455,31 @@ function AppCore({ auth }) {
       {toast && <Toast {...toast} onDismiss={() => setToast(null)} />}
 
       <div className="grain" style={{ minHeight: "100vh", background: T.bg }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+        >
+          <KnightScene
+            isGenerating={phase === "running"}
+            crimeLevel={currentCrimeLevel}
+            currentPhase={currentStep || ""}
+          />
+        </div>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(ellipse 60% 70% at 30% 50%, rgba(184,49,47,0.08), transparent)",
+          }}
+        />
+        <div style={{ position: "relative", zIndex: 10 }}>
         {phase !== "landing" && (
           <header
             style={{
@@ -1557,126 +1603,102 @@ function AppCore({ auth }) {
             <LoadingCrest onDone={() => setIntroDone(true)} />
           )}
           {phase === "landing" && introDone && (
-            <MarketingHome
-              onSummonKnight={() => setPhase("form")}
-              onDemo={runDemo}
-              isAuthenticated={isAuthenticated}
-              onLogin={() => loginWithRedirect()}
-              onLogout={() => logout({ returnTo: window.location.origin })}
-              userEmail={user?.email}
-            />
+            <div style={{ background: "transparent" }}>
+              <MarketingHome
+                onSummonKnight={() => setPhase("form")}
+                onDemo={runDemo}
+                isAuthenticated={isAuthenticated}
+                onLogin={() => loginWithRedirect()}
+                onLogout={() => logout({ returnTo: window.location.origin })}
+                userEmail={user?.email}
+              />
+            </div>
           )}
 
           {/* FORM */}
           {phase === "form" && (
             <div
-              style={{ animation: "fadeUp 0.35s ease both", paddingTop: 48 }}
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                padding: "0 5% 0 0",
+              }}
             >
-              <div style={{ marginBottom: 30 }}>
-                <h2
-                  style={{
-                    fontSize: 36,
-                    fontWeight: 700,
-                    fontStyle: "italic",
-                    color: T.parchment,
-                    marginBottom: 8,
-                    letterSpacing: "-0.5px",
-                    fontFamily: T.fontDisplay,
-                  }}
-                >
-                  Confess your crime.
-                </h2>
-                <p
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 400,
-                    color: T.parchmentDim,
-                    lineHeight: 1.65,
-                    fontFamily: T.fontBody,
-                  }}
-                >
-                  Tell the agent what happened. It handles everything else —
-                  autonomously.
-                </p>
-              </div>
               <div
                 style={{
-                  background: T.surface,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: T.radiusLg,
-                  padding: "26px 26px 22px",
-                  boxShadow: T.shadowMd,
+                  width: 480,
+                  maxHeight: "85vh",
+                  overflowY: "auto",
+                  background: "rgba(14,12,8,0.88)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: "1px solid rgba(201,168,76,0.15)",
+                  borderRadius: 8,
+                  padding: 32,
+                  animation: "fadeUp 0.35s ease both",
                 }}
               >
-                <InputForm onSubmit={submitForm} onDemo={runDemo} />
-              </div>
-            </div>
-          )}
-
-          {/* RUNNING */}
-          {phase === "running" && (
-            <div style={{ animation: "fadeUp 0.3s ease both", paddingTop: 48 }}>
-              <div style={{ marginBottom: 28 }}>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    background: T.goldLight,
-                    border: `1px solid ${T.goldBorder}`,
-                    borderRadius: T.radiusFull,
-                    padding: "5px 16px",
-                    marginBottom: 16,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: T.gold,
-                    letterSpacing: "2.5px",
-                    fontFamily: T.fontBody,
-                    animation: "goldPulse 2s ease infinite",
-                  }}
-                >
-                  <Spinner size={9} color={T.gold} /> AGENT RUNNING
+                <div style={{ marginBottom: 30 }}>
+                  <h2
+                    style={{
+                      fontSize: 36,
+                      fontWeight: 700,
+                      fontStyle: "italic",
+                      color: T.parchment,
+                      marginBottom: 8,
+                      letterSpacing: "-0.5px",
+                      fontFamily: T.fontDisplay,
+                    }}
+                  >
+                    Confess your crime.
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 400,
+                      color: T.parchmentDim,
+                      lineHeight: 1.65,
+                      fontFamily: T.fontBody,
+                    }}
+                  >
+                    Tell the agent what happened. It handles everything else —
+                    autonomously.
+                  </p>
                 </div>
-                <h2
-                  style={{
-                    fontSize: 34,
-                    fontWeight: 700,
-                    fontStyle: "italic",
-                    color: T.parchment,
-                    marginBottom: 6,
-                    fontFamily: T.fontDisplay,
-                  }}
-                >
-                  Building your alibi.
-                </h2>
-                <p
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 400,
-                    color: T.parchmentDim,
-                    fontFamily: T.fontBody,
-                  }}
-                >
-                  The agent is reasoning autonomously. Don't close this tab.
-                </p>
-              </div>
-              <div
-                style={{
-                  background: T.surface,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: T.radiusLg,
-                  padding: 22,
-                  boxShadow: T.shadow,
-                }}
-              >
-                <ProgressPanel steps={steps} currentStep={currentStep} />
+                <InputForm
+                  onSubmit={submitForm}
+                  onDemo={runDemo}
+                  onContextInput={handleContextInput}
+                />
               </div>
             </div>
           )}
 
           {/* RESULT */}
           {phase === "result" && result && (
-            <div style={{ animation: "fadeUp 0.4s ease both", paddingTop: 48 }}>
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 10,
+                overflowY: "auto",
+                background: "rgba(14,12,8,0.82)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                animation: "fadeUp 0.4s ease both",
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: 720,
+                  margin: "0 auto",
+                  padding: "48px 20px 80px",
+                }}
+              >
               {/* Header */}
               <div
                 style={{
@@ -1825,9 +1847,26 @@ function AppCore({ auth }) {
               >
                 + New Case
               </button>
+              </div>
             </div>
           )}
         </main>
+        </div>
+        {phase === "running" && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 20,
+              pointerEvents: "auto",
+            }}
+          >
+            <GeneratingOverlay
+              isGenerating={true}
+              currentPhase={currentStep || ""}
+            />
+          </div>
+        )}
       </div>
     </>
   );

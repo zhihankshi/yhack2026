@@ -1,278 +1,555 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import Lenis from "@studio-freight/lenis";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import confetti from "canvas-confetti";
-import { MarbleBackground } from "./MarbleBackground.jsx";
-import { KnightScene } from "./KnightScene.jsx";
-import { MagneticButton } from "./MagneticButton.jsx";
-import { CustomCursor } from "./CustomCursor.jsx";
-import { ScrollProgress } from "./ScrollProgress.jsx";
+import { useState, useEffect, useRef } from "react";
 import { T } from "../lib/tokens.js";
+import KnightHero from "./KnightHero.jsx";
 
-gsap.registerPlugin(ScrollTrigger);
-
-const TICKER = [
-  "Forgot the group chat birthday",
-  "Said 'on my way' for 40 minutes",
-  "Left on read for 6 days",
-  "Double-booked the one person who remembers",
-  "Liked the ex's post from 2019",
-  "Promised to call back tomorrow (last month)",
+const HERO_TICKER = [
+  "Forgot her birthday ✦",
+  "Ghosted the group chat ✦",
+  "Cancelled last minute again ✦",
+  "Missed the anniversary ✦",
+  "Left them on read for 3 weeks ✦",
+  "Showed up 2 hours late ✦",
 ];
 
-const ALIBI_CARDS = [
-  {
-    title: "Missed birthday",
-    alibi:
-      "A courier mis-routed your gift through a regional blackout — you were on hold with their disaster line for 4 hours. You have screenshots. The cake is en route.",
-  },
-  {
-    title: "Forgotten anniversary",
-    alibi:
-      "You were covering a colleague's on-call rotation after a hospitalisation — you couldn't say why because of HR. Flowers + handwritten note already dispatched.",
-  },
-  {
-    title: "Ghosted plans",
-    alibi:
-      "Your phone bricked during a firmware update the night before; recovery took until Monday. You're sending dinner for two to their door tonight.",
-  },
+const SOCIAL_TICKER = [
+  "Saved my relationship twice — @sophiamakes",
+  "Like having a lawyer and a florist on speed dial — TechCrunch",
+  "Genuinely unhinged. I love it. — @devonclark_",
+  "My mum thinks I am thoughtful now — App Store ★★★★★",
 ];
 
-const GIFTS = [
-  { name: "Artisan apology chocolate", hint: "Handwritten card included" },
-  { name: "Same-day flowers", hint: "No generic bouquets" },
-  { name: "Concert tickets (their taste)", hint: "Not yours" },
-  { name: "Spa recovery voucher", hint: "Guilt-absorbing" },
-  { name: "Rare vinyl / book", hint: "Proves you listen" },
+const RELATIONSHIP_OPTIONS = [
+  { value: "close friend", label: "Close Friend" },
+  { value: "coworker", label: "Coworker" },
+  { value: "family", label: "Family" },
+  { value: "romantic partner", label: "Romantic Partner" },
 ];
+const FAILURE_OPTIONS = [
+  { value: "forgot their birthday", label: "Forgot their birthday" },
+  { value: "missed an important meeting", label: "Missed a meeting" },
+  { value: "flaked on plans", label: "Flaked on plans" },
+  { value: "forgot an anniversary", label: "Forgot an anniversary" },
+  { value: "ignored messages", label: "Went MIA" },
+  { value: "other", label: "Other…" },
+];
+const BUDGET_OPTIONS = [
+  { value: "under_20", label: "Under $20" },
+  { value: "20_50", label: "$20 – $50" },
+  { value: "50_100", label: "$50 – $100" },
+  { value: "100_plus", label: "$100+" },
+];
+const MEDIUM_OPTIONS = [
+  { value: "text", label: "Text message" },
+  { value: "email", label: "Email" },
+  { value: "verbal", label: "In person" },
+];
+
+function MagneticButton({ children, onClick, style, type = "button" }) {
+  const ref = useRef(null);
+  const [t, setT] = useState("translate(0px, 0px)");
+
+  const onMove = (e) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    setT(
+      `translate(${(e.clientX - cx) * 0.18}px, ${(e.clientY - cy) * 0.18}px)`,
+    );
+  };
+
+  return (
+    <button
+      ref={ref}
+      type={type}
+      onClick={onClick}
+      onMouseMove={onMove}
+      onMouseLeave={() => setT("translate(0px, 0px)")}
+      style={{
+        ...style,
+        transform: t,
+        transition: "transform 0.2s ease-out",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Spinner({ size = 16, color = T.gold }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: size,
+        height: size,
+        flexShrink: 0,
+        border: `2px solid ${color}28`,
+        borderTopColor: color,
+        borderRadius: "50%",
+        animation: "mh-spin 0.7s linear infinite",
+      }}
+    />
+  );
+}
+
+function MarketingConfessionForm({ onSubmit, onDemo, onContextInput }) {
+  const [form, setForm] = useState({
+    name: "",
+    relationship: "close friend",
+    failure_type: "forgot their birthday",
+    custom_failure: "",
+    time_elapsed: "just happened",
+    prior_failures: false,
+    budget: "20_50",
+    medium: "text",
+    additional_context: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const canSubmit =
+    form.name.trim() &&
+    (form.failure_type !== "other" || form.custom_failure.trim());
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setLoading(true);
+    await onSubmit({
+      ...form,
+      failure_type:
+        form.failure_type === "other" ? form.custom_failure : form.failure_type,
+    });
+    setLoading(false);
+  };
+
+  const field = {
+    width: "100%",
+    background: "rgba(0,0,0,0.35)",
+    border: `1px solid ${T.border}`,
+    borderRadius: T.radiusSm,
+    padding: "10px 13px",
+    color: T.parchment,
+    fontSize: 13,
+    fontWeight: 400,
+    fontFamily: T.fontBody,
+    outline: "none",
+    transition: "border-color 0.2s ease",
+  };
+
+  const lbl = (text) => (
+    <label
+      style={{
+        display: "block",
+        fontSize: 9,
+        fontWeight: 600,
+        color: T.parchmentFaint,
+        letterSpacing: "2px",
+        textTransform: "uppercase",
+        marginBottom: 6,
+        fontFamily: T.fontBody,
+      }}
+    >
+      {text}
+    </label>
+  );
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 14,
+          marginBottom: 14,
+        }}
+      >
+        <div>
+          {lbl("Their Name")}
+          <input
+            style={field}
+            placeholder="Sarah…"
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
+          />
+        </div>
+        <div>
+          {lbl("Relationship")}
+          <select
+            style={field}
+            value={form.relationship}
+            onChange={(e) => set("relationship", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
+          >
+            {RELATIONSHIP_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        {lbl("What did you do")}
+        <select
+          style={field}
+          value={form.failure_type}
+          onChange={(e) => set("failure_type", e.target.value)}
+          onFocus={(e) => (e.target.style.borderColor = T.gold)}
+          onBlur={(e) => (e.target.style.borderColor = T.border)}
+        >
+          {FAILURE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {form.failure_type === "other" && (
+        <div style={{ marginBottom: 14 }}>
+          {lbl("Describe what happened")}
+          <input
+            style={field}
+            placeholder="I forgot to…"
+            value={form.custom_failure}
+            onChange={(e) => set("custom_failure", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
+          />
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 14,
+          marginBottom: 14,
+        }}
+      >
+        <div>
+          {lbl("How long ago")}
+          <select
+            style={field}
+            value={form.time_elapsed}
+            onChange={(e) => set("time_elapsed", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
+          >
+            {[
+              "just happened",
+              "yesterday",
+              "3 days ago",
+              "a week ago",
+              "a month ago",
+            ].map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          {lbl("Budget")}
+          <select
+            style={field}
+            value={form.budget}
+            onChange={(e) => set("budget", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
+          >
+            {BUDGET_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          {lbl("Medium")}
+          <select
+            style={field}
+            value={form.medium}
+            onChange={(e) => set("medium", e.target.value)}
+            onFocus={(e) => (e.target.style.borderColor = T.gold)}
+            onBlur={(e) => (e.target.style.borderColor = T.border)}
+          >
+            {MEDIUM_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        {lbl("Anything the agent should know")}
+        <textarea
+          style={{ ...field, height: 80, resize: "vertical" }}
+          placeholder="She's been stressed with deadlines lately, we've been friends 10 years…"
+          value={form.additional_context}
+          onChange={(e) => set("additional_context", e.target.value)}
+          onInput={(e) => onContextInput?.(e.target.value)}
+          onFocus={(e) => (e.target.style.borderColor = T.gold)}
+          onBlur={(e) => (e.target.style.borderColor = T.border)}
+        />
+      </div>
+
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 26,
+          cursor: "pointer",
+          fontSize: 12,
+          fontWeight: 400,
+          color: T.parchmentDim,
+          fontFamily: T.fontBody,
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={form.prior_failures}
+          onChange={(e) => set("prior_failures", e.target.checked)}
+          style={{ accentColor: T.gold, width: 15, height: 15, flexShrink: 0 }}
+        />
+        I&apos;ve let this person down before
+      </label>
+
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={loading || !canSubmit}
+        style={{
+          width: "100%",
+          padding: "14px",
+          background:
+            loading || !canSubmit
+              ? "rgba(201,168,76,0.08)"
+              : "linear-gradient(90deg, #B8312F, #C9A84C, #B8312F)",
+          backgroundSize: "200% auto",
+          animation:
+            loading || !canSubmit ? "none" : "mh-gradientShift 3s ease infinite",
+          border: `1px solid ${loading || !canSubmit ? T.goldBorder : "transparent"}`,
+          borderRadius: T.radius,
+          color: loading || !canSubmit ? T.gold : "#0E0C08",
+          fontSize: 15,
+          fontWeight: 700,
+          fontFamily: T.fontBody,
+          cursor: loading || !canSubmit ? "not-allowed" : "pointer",
+          transition: "opacity 0.18s ease",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        {loading ? (
+          <>
+            <Spinner size={15} color={T.gold} /> Running agent…
+          </>
+        ) : (
+          "Build My Alibi →"
+        )}
+      </button>
+
+      <div style={{ textAlign: "center", marginTop: 12 }}>
+        <button
+          type="button"
+          onClick={onDemo}
+          style={{
+            background: "none",
+            border: "none",
+            color: T.parchmentFaint,
+            fontSize: 11,
+            fontWeight: 500,
+            cursor: "pointer",
+            textDecoration: "underline",
+            textDecorationStyle: "dotted",
+            fontFamily: T.fontBody,
+          }}
+        >
+          or run with demo data (Sarah&apos;s birthday) →
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function MarketingHome({
   onSummonKnight,
   onDemo,
+  onContextInput,
   isAuthenticated = false,
   onLogin = () => {},
   onLogout = () => {},
   userEmail,
 }) {
-  const wrapRef = useRef(null);
-  const heroRef = useRef(null);
-  const knightHeroRef = useRef(null);
-  const howRef = useRef(null);
-  const howTrackRef = useRef(null);
-  const examplesRef = useRef(null);
-  const ctaRef = useRef(null);
-  const pathRef = useRef(null);
-
-  const [navSolid, setNavSolid] = useState(false);
-  const [heroKnightHover, setHeroKnightHover] = useState(false);
-  const [ctaKnightHover, setCtaKnightHover] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [progressPct, setProgressPct] = useState("0%");
+  const [navVisible, setNavVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [heroScroll, setHeroScroll] = useState(0);
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [web3On] = useState(true);
+  const [heroVisible, setHeroVisible] = useState(false);
+  const heroSectionRef = useRef(null);
 
-  const fireConfetti = useCallback(() => {
-    const gold = "#C9A84C";
-    const red = "#B8312F";
-    confetti({
-      particleCount: 90,
-      spread: 68,
-      origin: { y: 0.65 },
-      colors: [gold, red, "#F2E9D8"],
-    });
+  useEffect(() => {
+    const el = document.createElement("style");
+    el.setAttribute("data-marketing-home", "1");
+    el.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,700;1,900&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --ink: #0E0C08;
+  --gold: #C9A84C;
+  --gold-dim: #8B6F2E;
+  --crimson: #B8312F;
+  --parchment: #F2E9D8;
+  --parchment-dim: #c8bba4;
+}
+
+@keyframes mh-slideUp {
+  from { transform: translateY(110%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes mh-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mh-badgeIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes mh-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes mh-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes mh-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mh-gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+`;
+    document.head.appendChild(el);
+    return () => {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    };
   }, []);
 
   useEffect(() => {
-    document.body.style.cursor = "none";
+    const onScroll = () => {
+      const sy = window.scrollY;
+      const ih = window.innerHeight || 1;
+      setScrolled(sy > 60);
+      setNavVisible(sy > ih * 0.6);
+      setHeroVisible(sy > ih * 0.5);
+      setScrollProgress(Math.min(sy / (ih * 0.8), 1));
+      const max = document.body.scrollHeight - ih;
+      const pct = max > 0 ? (sy / max) * 100 : 0;
+      setProgressPct(`${pct}%`);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    window.addEventListener("resize", onScroll, { passive: true });
     return () => {
-      document.body.style.cursor = "";
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, []);
 
   useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.15,
-      smoothWheel: true,
-      wheelMultiplier: 0.92,
-    });
-
-    lenis.on("scroll", ScrollTrigger.update);
-    lenis.on("scroll", (instance) => {
-      setScrollProgress(instance.progress ?? 0);
-    });
-
-    let rafId;
-    const raf = (time) => {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
-    };
-    rafId = requestAnimationFrame(raf);
-
-    const scrollEl = document.documentElement;
-    ScrollTrigger.scrollerProxy(scrollEl, {
-      scrollTop(value) {
-        if (arguments.length) lenis.scrollTo(value, { immediate: true });
-        return lenis.scroll;
-      },
-      getBoundingClientRect() {
-        return {
-          top: 0,
-          left: 0,
-          width: window.innerWidth,
-          height: window.innerHeight,
-        };
-      },
-    });
-
-    let triggers = [];
-
-    const boot = () => {
-      const wrap = wrapRef.current;
-      const hero = heroRef.current;
-      if (wrap) {
-        triggers.push(
-          ScrollTrigger.create({
-            trigger: wrap,
-            start: "top -80",
-            end: 999999,
-            scroller: scrollEl,
-            onEnter: () => setNavSolid(true),
-            onLeaveBack: () => setNavSolid(false),
-          }),
-        );
-      }
-      if (hero) {
-        triggers.push(
-          ScrollTrigger.create({
-            trigger: hero,
-            start: "top top",
-            end: "bottom top",
-            scroller: scrollEl,
-            onUpdate: (self) => setHeroScroll(self.progress),
-          }),
-        );
-      }
-
-      const howSection = howRef.current;
-      const howTrack = howTrackRef.current;
-      if (howSection && howTrack) {
-        const getScroll = () =>
-          Math.max(0, howTrack.scrollWidth - window.innerWidth);
-        gsap.to(howTrack, {
-          x: () => -getScroll(),
-          ease: "none",
-          scrollTrigger: {
-            trigger: howSection,
-            scroller: scrollEl,
-            start: "top top",
-            end: () => `+=${getScroll() + window.innerHeight * 0.45}`,
-            pin: true,
-            scrub: 1,
-            invalidateOnRefresh: true,
-          },
-        });
-      }
-
-      const cards = gsap.utils.toArray(".alibi-card");
-      if (cards.length && examplesRef.current) {
-        gsap.from(cards, {
-          rotateY: 45,
-          opacity: 0,
-          y: 40,
-          stagger: 0.12,
-          duration: 0.85,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: examplesRef.current,
-            scroller: scrollEl,
-            start: "top 75%",
-          },
-        });
-      }
-
-      if (ctaRef.current) {
-        const words = ctaRef.current.querySelectorAll(".cta-word");
-        if (words.length) {
-          gsap.from(words, {
-            y: 80,
-            opacity: 0,
-            stagger: 0.08,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: ctaRef.current,
-              scroller: scrollEl,
-              start: "top 70%",
-              end: "top 20%",
-              scrub: 1,
-            },
-          });
-        }
-      }
-
-      const path = pathRef.current;
-      if (path && wrap) {
-        const pathLen = path.getTotalLength();
-        path.style.strokeDasharray = `${pathLen}`;
-        path.style.strokeDashoffset = `${pathLen}`;
-        gsap.to(path, {
-          strokeDashoffset: 0,
-          ease: "none",
-          scrollTrigger: {
-            trigger: wrap,
-            scroller: scrollEl,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: true,
-          },
-        });
-      }
-
-      gsap.from(".hero-knight-wrap", {
-        scale: 0.85,
-        opacity: 0,
-        duration: 1.2,
-        ease: "power2.out",
-        delay: 0.15,
-      });
-      gsap.from(".hero-char", {
-        y: 36,
-        opacity: 0,
-        rotateZ: -5,
-        stagger: 0.028,
-        duration: 0.95,
-        ease: "power3.out",
-        delay: 0.35,
-      });
-      gsap.from(".hero-badge", {
-        x: 72,
-        opacity: 0,
-        duration: 0.85,
-        ease: "back.out(1.35)",
-        delay: 0.55,
-      });
-
-      ScrollTrigger.refresh();
-    };
-
-    const frame = requestAnimationFrame(boot);
-
+    const prev = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "smooth";
     return () => {
-      cancelAnimationFrame(frame);
-      cancelAnimationFrame(rafId);
-      triggers.forEach((t) => t.kill());
-      lenis.destroy();
-      ScrollTrigger.getAll().forEach((t) => t.kill());
+      document.documentElement.style.scrollBehavior = prev;
     };
   }, []);
 
-  const headline = "Your knight in shining alibi.";
-  const chars = headline.split("");
+  const scrollToConfess = () => {
+    document
+      .getElementById("confess-section")
+      ?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const navLink = {
+    fontSize: 12,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "var(--parchment-dim)",
+    textDecoration: "none",
+    fontFamily: "'DM Sans', sans-serif",
+    fontWeight: 400,
+  };
+
+  const ghostBtn = {
+    padding: "10px 20px",
+    border: "1px solid rgba(201,168,76,0.35)",
+    background: "transparent",
+    color: "var(--gold)",
+    fontSize: 11,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    fontFamily: "'DM Sans', sans-serif",
+    cursor: "pointer",
+    borderRadius: 2,
+  };
+
+  const primaryBtn = {
+    padding: "12px 24px",
+    border: "none",
+    background: "var(--crimson)",
+    color: "var(--parchment)",
+    fontSize: 11,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    fontFamily: "'DM Sans', sans-serif",
+    fontWeight: 500,
+    cursor: "pointer",
+    borderRadius: 2,
+  };
 
   return (
-    <div ref={wrapRef} style={{ position: "relative", minHeight: "100vh" }}>
-      <CustomCursor />
-      <ScrollProgress progress={scrollProgress} />
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "transparent",
+        color: "var(--parchment)",
+        fontFamily: "'DM Sans', sans-serif",
+      }}
+    >
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          height: 2,
+          width: progressPct,
+          maxWidth: "100%",
+          background: "linear-gradient(90deg, #C9A84C, #B8312F)",
+          zIndex: 100,
+          pointerEvents: "none",
+        }}
+      />
 
       <nav
         style={{
@@ -280,979 +557,1169 @@ export function MarketingHome({
           top: 0,
           left: 0,
           right: 0,
-          zIndex: 1000,
+          zIndex: 50,
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "14px 28px",
-          background: navSolid ? "rgba(14,12,8,0.88)" : "transparent",
-          backdropFilter: navSolid ? "blur(16px)" : "none",
-          WebkitBackdropFilter: navSolid ? "blur(16px)" : "none",
-          borderBottom: navSolid ? `1px solid ${T.border}` : "1px solid transparent",
-          transition: "background 0.35s ease, border-color 0.35s ease",
+          padding: scrolled ? "16px 48px" : "24px 48px",
+          background: scrolled ? "rgba(14,12,8,0.85)" : "transparent",
+          backdropFilter: scrolled ? "blur(20px)" : "none",
+          WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
+          borderBottom: scrolled
+            ? "1px solid rgba(201,168,76,0.15)"
+            : "1px solid transparent",
+          opacity: navVisible ? 1 : 0,
+          transform: navVisible ? "translateY(0)" : "translateY(-100%)",
+          pointerEvents: navVisible ? "all" : "none",
+          transition:
+            "opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease, padding 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease",
         }}
       >
         <div
           style={{
-            fontFamily: T.fontDisplay,
-            fontWeight: 900,
+            fontFamily: "'Cormorant Garamond', serif",
             fontStyle: "italic",
+            fontWeight: 900,
             fontSize: 22,
-            color: T.parchment,
-            letterSpacing: "-0.02em",
+            color: "var(--gold)",
           }}
         >
           Sir Alibi
         </div>
+
         <div
           style={{
-            display: "none",
-            gap: 28,
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: T.parchmentDim,
-            fontFamily: T.fontBody,
+            display: "flex",
+            alignItems: "center",
+            gap: 32,
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
           }}
-          className="nav-links"
         >
-          <a href="#how" style={{ color: "inherit", textDecoration: "none" }}>
-            Ritual
+          <a href="#how" style={navLink}>
+            How It Works
           </a>
-          <a href="#examples" style={{ color: "inherit", textDecoration: "none" }}>
-            Proof
+          <a href="#examples" style={navLink}>
+            Alibis
           </a>
-          <a href="#vault" style={{ color: "inherit", textDecoration: "none" }}>
-            Vault
+          <a href="#vault" style={navLink}>
+            The Vault
           </a>
-          <a href="#pricing" style={{ color: "inherit", textDecoration: "none" }}>
-            Ransom
+          <a href="#pricing" style={navLink}>
+            Pricing
           </a>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {web3On && (
-            <button
-              type="button"
-              title="Connect to unlock premium alibis"
-              onClick={() => setWalletConnected((v) => !v)}
-              style={{
-                padding: "8px 14px",
-                borderRadius: T.radiusSm,
-                border: `1px solid ${walletConnected ? T.gold : T.border}`,
-                background: walletConnected ? T.goldLight : "transparent",
-                color: walletConnected ? T.gold : T.parchmentDim,
-                fontSize: 10,
-                fontWeight: 600,
-                fontFamily: T.fontBody,
-                cursor: "pointer",
-                maxWidth: 200,
-                lineHeight: 1.25,
-              }}
-            >
-              {walletConnected ? "Wallet linked" : "Connect — premium alibis"}
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button type="button" style={ghostBtn}>
+            Connect Wallet
+          </button>
+          <MagneticButton onClick={scrollToConfess} style={primaryBtn}>
+            Summon Knight
+          </MagneticButton>
+          {isAuthenticated ? (
+            <>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "var(--parchment-dim)",
+                  maxWidth: 160,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={userEmail}
+              >
+                {userEmail || "Signed in"}
+              </span>
+              <button type="button" style={ghostBtn} onClick={onLogout}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <button type="button" style={ghostBtn} onClick={onLogin}>
+              Sign in
             </button>
           )}
-          <MagneticButton primary onClick={onSummonKnight}>
-            Summon knight
-          </MagneticButton>
         </div>
       </nav>
-      <style>{`
-        @media (min-width: 900px) {
-          .nav-links { display: flex !important; }
-        }
-      `}</style>
 
-      <svg
-        style={{
-          position: "fixed",
-          left: 24,
-          top: "30%",
-          width: 80,
-          height: "45%",
-          zIndex: 5,
-          pointerEvents: "none",
-          opacity: 0.35,
-        }}
-        viewBox="0 0 80 400"
-      >
-        <path
-          ref={pathRef}
-          d="M40 0 Q 70 80 40 160 Q 10 240 40 320 Q 60 380 40 400"
-          stroke={T.gold}
-          strokeWidth="1.5"
-          fill="none"
-          strokeLinecap="round"
-        />
-      </svg>
-
-      {/* Hero */}
+      {/* Section 1 — full viewport scene (knight visible behind) */}
       <section
-        ref={heroRef}
         style={{
-          position: "relative",
+          height: "100vh",
           minHeight: "100vh",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          alignItems: "center",
-          padding: "100px 28px 100px",
-          gap: 24,
+          position: "relative",
           overflow: "hidden",
+          background: "transparent",
         }}
-        className="hero-section"
       >
-        <MarbleBackground />
         <div
           style={{
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(105deg, rgba(14,12,8,0.75) 0%, rgba(14,12,8,0.35) 45%, rgba(14,12,8,0.85) 100%)",
+              "radial-gradient(ellipse 50% 60% at 50% 80%, rgba(201,168,76,0.06), transparent)",
             pointerEvents: "none",
+            zIndex: 1,
           }}
         />
-
         <div
-          ref={knightHeroRef}
-          className="hero-knight-wrap"
           style={{
-            position: "relative",
-            zIndex: 2,
-            height: "min(72vh, 560px)",
-            gridColumn: "1",
+            position: "absolute",
+            top: "50%",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            transform: "translateY(-50%)",
+            zIndex: 3,
+            pointerEvents: "none",
           }}
-          onMouseEnter={() => setHeroKnightHover(true)}
-          onMouseLeave={() => setHeroKnightHover(false)}
         >
-          <KnightScene
-            scrollProgress={heroScroll}
-            ctaHover={heroKnightHover}
-            variant="hero"
-          />
-        </div>
-
-        <div style={{ position: "relative", zIndex: 2, paddingRight: 12 }}>
-          <div
-            style={{
-              display: "inline-block",
-              marginBottom: 20,
-              padding: "8px 16px",
-              border: `1px solid ${T.goldBorder}`,
-              background: "rgba(201,168,76,0.06)",
-              borderRadius: T.radiusFull,
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.2em",
-              color: T.gold,
-              fontFamily: T.fontBody,
-            }}
-            className="hero-badge"
-          >
-            2,400 battles fought
-          </div>
           <h1
             style={{
-              fontFamily: T.fontDisplay,
-              fontWeight: 900,
+              fontFamily: "'Cormorant Garamond', serif",
               fontStyle: "italic",
-              fontSize: "clamp(2.4rem, 5vw, 4rem)",
-              lineHeight: 1.05,
-              color: T.parchment,
-              margin: "0 0 20px",
+              fontWeight: 900,
+              fontSize: "clamp(80px, 12vw, 160px)",
+              color: "transparent",
+              WebkitTextStroke: "2px rgba(201,168,76,0.8)",
+              textShadow:
+                "0 0 80px rgba(201,168,76,0.3), 0 0 160px rgba(201,168,76,0.15)",
+              letterSpacing: "-0.02em",
+              margin: 0,
+              lineHeight: 1,
+              opacity: 1 - scrollProgress * 1.2,
+              transform: `translateY(${-scrollProgress * 60}px) scale(${1 - scrollProgress * 0.15})`,
             }}
           >
-            {chars.map((ch, i) => (
-              <span
-                key={`${i}-${ch}`}
-                className="hero-char"
-                style={{ display: "inline-block" }}
-              >
-                {ch === " " ? "\u00a0" : ch}
-              </span>
-            ))}
+            Sir Alibi
           </h1>
           <p
             style={{
-              fontSize: "clamp(0.95rem, 1.4vw, 1.1rem)",
-              color: T.parchmentDim,
-              maxWidth: 420,
-              lineHeight: 1.7,
-              fontFamily: T.fontBody,
+              margin: "16px 0 0",
+              fontSize: 14,
+              letterSpacing: "0.3em",
+              textTransform: "uppercase",
+              color: "rgba(201,168,76,0.4)",
+              fontFamily: "'DM Sans', sans-serif",
               fontWeight: 400,
-              marginBottom: 28,
+              opacity: 1 - scrollProgress * 2,
             }}
           >
-            Describe the screw-up. Sir Alibi forges the alibi, ships a real gift
-            to the wronged party, and leaves you looking oddly heroic.
+            Your knight in shining alibi
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            <MagneticButton
-              primary
-              onClick={() => {
-                fireConfetti();
-                onSummonKnight();
+        </div>
+      </section>
+
+      {/* Section 2 — hero text reveal */}
+      <section
+        ref={heroSectionRef}
+        style={{
+          position: "relative",
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          background: "transparent",
+          overflow: "hidden",
+          width: "100%",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            minHeight: "100vh",
+            alignItems: "stretch",
+          }}
+        >
+          <div
+            style={{
+              width: "50%",
+              height: "100vh",
+              position: "relative",
+              background: "transparent",
+              opacity: heroVisible ? 1 : 0,
+              transform: heroVisible
+                ? "translateX(0) scale(1)"
+                : "translateX(-60px) scale(0.92)",
+              transition:
+                "opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1), transform 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
+              transitionDelay: "0.2s",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "radial-gradient(ellipse 70% 80% at 50% 60%, rgba(14,12,8,0.45) 0%, transparent 70%)",
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: "15%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "280px",
+                height: "40px",
+                background:
+                  "radial-gradient(ellipse, rgba(201,168,76,0.15) 0%, transparent 70%)",
+                borderRadius: "50%",
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 2,
               }}
             >
-              Confess your crime
-            </MagneticButton>
-            <MagneticButton onClick={onDemo}>Run the demo</MagneticButton>
+              <KnightHero />
+            </div>
           </div>
+          <div
+            style={{
+              width: "50%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              padding: 48,
+              background: "rgba(14,12,8,0.82)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              borderLeft: "1px solid rgba(201,168,76,0.1)",
+              minHeight: "100vh",
+              position: "relative",
+              boxSizing: "border-box",
+              opacity: heroVisible ? 1 : 0,
+              transform: heroVisible ? "translateX(0)" : "translateX(40px)",
+              transition:
+                "opacity 1s ease 0.4s, transform 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s",
+            }}
+          >
+          <p
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.25em",
+              textTransform: "uppercase",
+              color: "var(--gold)",
+              opacity: 0.7,
+              margin: "0 0 20px",
+            }}
+          >
+            Est. 2024 — AI-Powered Absolution
+          </p>
+
+          <h1
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontStyle: "italic",
+              fontWeight: 900,
+              fontSize: "clamp(52px, 6vw, 84px)",
+              lineHeight: 0.95,
+              color: "var(--parchment)",
+              margin: "0 0 32px",
+            }}
+          >
+            {[
+              { text: "Your Knight", color: "var(--parchment)", delay: "0.3s" },
+              {
+                text: "In Shining",
+                color: "var(--gold)",
+                delay: "0.5s",
+              },
+              { text: "Alibi.", color: "var(--gold)", delay: "0.7s" },
+            ].map((line, i) => (
+              <div
+                key={i}
+                style={{ overflow: "hidden", marginBottom: i < 2 ? 4 : 0 }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    color: line.color,
+                    animation: `mh-slideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) ${line.delay} both`,
+                    animationPlayState: heroVisible ? "running" : "paused",
+                  }}
+                >
+                  {line.text}
+                </span>
+              </div>
+            ))}
+          </h1>
+
+          <p
+            style={{
+              fontSize: 15,
+              lineHeight: 1.8,
+              color: "var(--parchment-dim)",
+              maxWidth: 360,
+              margin: "0 0 40px",
+              opacity: 0,
+              animation: "mh-fadeIn 0.9s ease forwards",
+              animationDelay: "1.2s",
+            }}
+          >
+            Describe your social crime. Sir Alibi crafts the perfect excuse —
+            then ships a real gift to the person you wronged.
+          </p>
+
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <MagneticButton
+              onClick={scrollToConfess}
+              style={{
+                ...primaryBtn,
+                padding: "14px 32px",
+                textTransform: "none",
+                fontSize: 13,
+                letterSpacing: "0.02em",
+              }}
+            >
+              Confess Your Crime
+            </MagneticButton>
+            <MagneticButton
+              onClick={onDemo}
+              style={{
+                ...ghostBtn,
+                padding: "14px 20px",
+                fontSize: 12,
+                textTransform: "none",
+                letterSpacing: "0.02em",
+              }}
+            >
+              or try demo →
+            </MagneticButton>
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              right: 48,
+              top: 80,
+              border: "1px solid rgba(201,168,76,0.2)",
+              padding: "12px 18px",
+              background: "rgba(201,168,76,0.05)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              transform: "translateX(30px)",
+              opacity: 0,
+              animation: "mh-badgeIn 0.85s ease forwards",
+              animationDelay: "1.6s",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontWeight: 900,
+                fontSize: 28,
+                color: "var(--gold)",
+                lineHeight: 1,
+              }}
+            >
+              2,847
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: "0.15em",
+                color: "var(--parchment-dim)",
+                marginTop: 6,
+              }}
+            >
+              Battles Fought
+            </div>
+          </div>
+        </div>
         </div>
 
         <div
           style={{
-            gridColumn: "1 / -1",
-            position: "relative",
-            zIndex: 2,
-            marginTop: -32,
-            borderTop: `1px solid ${T.border}`,
-            paddingTop: 14,
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            borderTop: "1px solid rgba(201,168,76,0.1)",
+            background: "rgba(14,12,8,0.7)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            padding: "14px 0",
             overflow: "hidden",
           }}
         >
           <div
             style={{
               display: "flex",
-              gap: 48,
-              animation: "ticker 28s linear infinite",
               whiteSpace: "nowrap",
-              fontSize: 13,
-              fontFamily: T.fontBody,
-              color: T.parchmentFaint,
+              animation: "mh-ticker 25s linear infinite",
             }}
           >
-            {[...TICKER, ...TICKER].map((t, i) => (
-              <span key={i}>
-                <span style={{ color: T.crimson, marginRight: 8 }}>✦</span>
-                {t}
+            {[...HERO_TICKER, ...HERO_TICKER].map((item, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: 12,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--parchment-dim)",
+                  padding: "0 40px",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                {item}
               </span>
             ))}
           </div>
         </div>
       </section>
-      <style>{`
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-      `}</style>
+
+      {/* Section 3 — confession form (inline) */}
+      <section
+        id="confess-section"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          padding: "80px 5% 80px 0",
+          background: "transparent",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            width: 480,
+            maxWidth: "100%",
+            background: "rgba(14,12,8,0.88)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(201,168,76,0.15)",
+            borderRadius: 8,
+            padding: 32,
+          }}
+        >
+          <div style={{ marginBottom: 30 }}>
+            <h2
+              style={{
+                fontSize: 36,
+                fontWeight: 700,
+                fontStyle: "italic",
+                color: "var(--parchment)",
+                marginBottom: 8,
+                letterSpacing: "-0.5px",
+                fontFamily: "'Cormorant Garamond', serif",
+              }}
+            >
+              Confess your crime.
+            </h2>
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 400,
+                color: "var(--parchment-dim)",
+                lineHeight: 1.65,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Tell the agent what happened. It handles everything else —
+              autonomously.
+            </p>
+          </div>
+          <MarketingConfessionForm
+            onSubmit={onSummonKnight}
+            onDemo={onDemo}
+            onContextInput={onContextInput}
+          />
+        </div>
+      </section>
 
       {/* Social proof */}
       <section
         style={{
-          padding: "36px 0",
-          background: "#1a1610",
-          borderBlock: `1px solid ${T.border}`,
+          padding: "40px 48px",
+          borderTop: "1px solid rgba(201,168,76,0.08)",
+          borderBottom: "1px solid rgba(201,168,76,0.08)",
+          background: "rgba(242,233,216,0.02)",
+          overflow: "hidden",
         }}
       >
         <div
           style={{
             display: "flex",
-            gap: 56,
-            animation: "ticker 40s linear infinite",
             whiteSpace: "nowrap",
-            fontFamily: T.fontDisplay,
-            fontStyle: "italic",
-            fontSize: 18,
-            color: T.parchmentDim,
+            animation: "mh-marquee 20s linear infinite",
           }}
         >
-          {[
-            '"I should be in jail. Instead I am loved." — M., London',
-            '"The gift arrived before my lie finished loading." — J., NYC',
-            '"Chaotic good. My mum thinks I planned everything." — A., Leeds',
-            '"I forgot our anniversary. Sir Alibi did not." — R., Berlin',
-          ].map((q, i) => (
-            <span key={i}>{q}</span>
+          {[...SOCIAL_TICKER, ...SOCIAL_TICKER].map((item, i) => (
+            <span
+              key={i}
+              style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontStyle: "italic",
+                fontSize: 18,
+                color: "var(--parchment-dim)",
+                paddingRight: 80,
+                borderRight: "1px solid rgba(201,168,76,0.15)",
+                flexShrink: 0,
+              }}
+            >
+              {item}
+            </span>
           ))}
         </div>
       </section>
 
-      {/* How it works — horizontal pin */}
-      <section
-        id="how"
-        ref={howRef}
-        style={{
-          position: "relative",
-          minHeight: "100vh",
-          background: T.bg,
-          overflow: "hidden",
-        }}
-      >
-        <h2
+      {/* How it works */}
+      <section id="how" style={{ padding: "120px 48px", background: "#0E0C08" }}>
+        <p
           style={{
-            position: "absolute",
-            top: 24,
-            left: 28,
-            zIndex: 2,
-            fontFamily: T.fontDisplay,
-            fontStyle: "italic",
-            fontSize: 28,
-            color: T.parchment,
-            margin: 0,
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.25em",
+            color: "var(--gold)",
+            opacity: 0.6,
+            margin: "0 0 16px",
           }}
         >
-          How the ritual works
+          The Process
+        </p>
+        <h2
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontStyle: "italic",
+            fontWeight: 900,
+            fontSize: "clamp(36px, 4vw, 56px)",
+            lineHeight: 1.1,
+            color: "var(--parchment)",
+            margin: "0 0 64px",
+          }}
+        >
+          Three steps. One absolution.
         </h2>
+
         <div
-          ref={howTrackRef}
           style={{
             display: "flex",
-            height: "100vh",
-            alignItems: "center",
-            gap: 0,
-            paddingLeft: 28,
-            width: "max-content",
+            flexDirection: "row",
+            gap: 1,
+            background: "rgba(201,168,76,0.08)",
           }}
         >
           {[
             {
+              n: "01",
               title: "Describe your crime",
-              body: "Spill it. We don't judge — we optimise.",
-              field: true,
+              body: "Forgot the anniversary. Ghosted the group chat. No judgement — we have heard worse.",
+              icon: (
+                <svg
+                  width={20}
+                  height={20}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#C9A84C"
+                  strokeWidth={1.5}
+                >
+                  <path d="M4 6h16M4 12h10M4 18h14" />
+                </svg>
+              ),
             },
             {
-              title: "Sir Alibi crafts your alibi",
-              body: "Narrative, tone, plausibility — weaponised charm.",
-              stream: true,
+              n: "02",
+              title: "Sir Alibi crafts your excuse",
+              body: "Our AI generates a personalised, legally-plausible alibi. Customised to your exact relationship.",
+              icon: (
+                <svg
+                  width={20}
+                  height={20}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#C9A84C"
+                  strokeWidth={1.5}
+                >
+                  <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                </svg>
+              ),
             },
             {
+              n: "03",
               title: "Gift ships within hours",
-              body: "Real parcel. Real receipt. Real damage control.",
-              gift: true,
+              body: "A curated premium gift chosen for the occasion arrives before they finish being angry.",
+              icon: (
+                <svg
+                  width={20}
+                  height={20}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#C9A84C"
+                  strokeWidth={1.5}
+                >
+                  <rect x="3" y="8" width="18" height="12" rx="1" />
+                  <path d="M3 10h18M12 8V6a2 2 0 00-2-2H9a2 2 0 00-2 2v2" />
+                </svg>
+              ),
             },
-          ].map((p, idx) => (
+          ].map((panel) => (
             <div
-              key={idx}
+              key={panel.n}
               style={{
-                width: "100vw",
-                maxWidth: "min(100vw, 1100px)",
-                flexShrink: 0,
-                padding: "100px 48px 80px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                borderRight: `1px solid ${T.border}`,
-                minHeight: "70vh",
+                flex: 1,
+                padding: "56px 48px",
+                background: "#0E0C08",
+                position: "relative",
+                transition: "background 0.35s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(201,168,76,0.03)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#0E0C08";
               }}
             >
               <span
                 style={{
-                  fontSize: 10,
-                  letterSpacing: "0.25em",
-                  color: T.gold,
-                  fontFamily: T.fontBody,
-                  marginBottom: 12,
+                  position: "absolute",
+                  top: 24,
+                  right: 32,
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontWeight: 900,
+                  fontSize: 80,
+                  color: "rgba(201,168,76,0.07)",
+                  lineHeight: 1,
                 }}
               >
-                PANEL {idx + 1}
+                {panel.n}
               </span>
-              <h3
-                style={{
-                  fontFamily: T.fontDisplay,
-                  fontStyle: "italic",
-                  fontSize: 36,
-                  color: T.parchment,
-                  margin: "0 0 16px",
-                }}
-              >
-                {p.title}
-              </h3>
-              <p
-                style={{
-                  fontSize: 15,
-                  color: T.parchmentDim,
-                  fontFamily: T.fontBody,
-                  maxWidth: 420,
-                  lineHeight: 1.65,
-                }}
-              >
-                {p.body}
-              </p>
-              {p.field && (
-                <input
-                  readOnly
-                  defaultValue="I said I'd bring dessert. I brought nothing."
-                  style={{
-                    marginTop: 24,
-                    width: "100%",
-                    maxWidth: 480,
-                    padding: "14px 16px",
-                    background: T.surface2,
-                    border: `1px solid ${T.border}`,
-                    borderRadius: T.radiusSm,
-                    color: T.parchment,
-                    fontFamily: T.fontBody,
-                    fontSize: 14,
-                  }}
-                />
-              )}
-              {p.stream && (
-                <div
-                  style={{
-                    marginTop: 24,
-                    padding: 20,
-                    background: "#0a0906",
-                    border: `1px solid ${T.goldBorder}`,
-                    borderRadius: T.radius,
-                    fontFamily: "ui-monospace, monospace",
-                    fontSize: 12,
-                    color: T.parchment,
-                    maxWidth: 520,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {">"} generating plausible narrative…
-                  <br />
-                  {">"} tone: repentant-but-funny
-                  <br />
-                  {">"} alibi strength: 94%
-                </div>
-              )}
-              {p.gift && (
-                <div
-                  style={{
-                    marginTop: 24,
-                    width: 120,
-                    height: 120,
-                    border: `2px dashed ${T.crimson}`,
-                    borderRadius: T.radiusSm,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 42,
-                  }}
-                >
-                  🎁
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Examples */}
-      <section
-        id="examples"
-        ref={examplesRef}
-        style={{
-          padding: "100px 28px",
-          background: `linear-gradient(180deg, ${T.bg} 0%, ${T.burgundy} 55%, ${T.bg} 100%)`,
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: T.fontDisplay,
-            fontStyle: "italic",
-            fontSize: 36,
-            color: T.parchment,
-            marginBottom: 40,
-            textAlign: "center",
-          }}
-        >
-          Alibis that should not work (but do)
-        </h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 24,
-            perspective: 1200,
-          }}
-        >
-          {ALIBI_CARDS.map((c) => (
-            <div
-              key={c.title}
-              className="alibi-card"
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.radiusLg,
-                padding: 28,
-                transformStyle: "preserve-3d",
-                boxShadow: T.shadow,
-              }}
-            >
               <div
                 style={{
-                  fontSize: 10,
-                  letterSpacing: "0.2em",
-                  color: T.crimson,
-                  fontFamily: T.fontBody,
-                  marginBottom: 10,
+                  width: 48,
+                  height: 48,
+                  border: "1px solid rgba(201,168,76,0.2)",
+                  borderRadius: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 32,
                 }}
               >
-                CASE FILE
+                {panel.icon}
               </div>
               <h3
                 style={{
-                  fontFamily: T.fontDisplay,
+                  fontFamily: "'Cormorant Garamond', serif",
                   fontStyle: "italic",
-                  fontSize: 22,
-                  color: T.parchment,
-                  margin: "0 0 12px",
+                  fontSize: 26,
+                  color: "var(--parchment)",
+                  margin: "0 0 16px",
                 }}
               >
-                {c.title}
+                {panel.title}
               </h3>
               <p
                 style={{
                   fontSize: 14,
-                  lineHeight: 1.75,
-                  color: T.parchmentDim,
-                  fontFamily: T.fontBody,
+                  lineHeight: 1.8,
+                  color: "var(--parchment-dim)",
                   margin: 0,
                 }}
               >
-                {c.alibi}
+                {panel.body}
               </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Gift vault */}
+      {/* Alibi examples */}
       <section
-        id="vault"
+        id="examples"
         style={{
-          padding: "80px 0",
-          background: T.bg,
-          borderBlock: `1px solid ${T.border}`,
+          padding: "120px 48px",
+          background: "linear-gradient(180deg, #0E0C08 0%, #1a0a0a 100%)",
         }}
       >
+        <p
+          style={{
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.25em",
+            color: "var(--gold)",
+            opacity: 0.6,
+            margin: "0 0 16px",
+          }}
+        >
+          Recent Battles
+        </p>
         <h2
           style={{
-            padding: "0 28px",
-            fontFamily: T.fontDisplay,
+            fontFamily: "'Cormorant Garamond', serif",
             fontStyle: "italic",
-            fontSize: 28,
-            color: T.parchment,
-            marginBottom: 28,
+            fontWeight: 900,
+            fontSize: "clamp(32px, 4vw, 48px)",
+            color: "var(--parchment)",
+            margin: "0 0 48px",
           }}
         >
-          The gift vault
+          Alibis forged in this very hall.
         </h2>
+
         <div
           style={{
-            display: "flex",
-            gap: 20,
-            overflowX: "auto",
-            padding: "0 28px 12px",
-            scrollSnapType: "x mandatory",
-            WebkitOverflowScrolling: "touch",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 1,
+            background: "rgba(184,49,47,0.08)",
           }}
         >
-          {GIFTS.map((g) => (
+          {[
+            {
+              tag: "Forgotten Birthday",
+              title: "I missed her birthday — we had been together 4 years",
+              quote:
+                "My dearest — I was consumed ensuring the gift I commissioned would be worthy of you. The courier failed me not you. It arrives tomorrow.",
+            },
+            {
+              tag: "Ghosted Plans",
+              title: "I cancelled on my best friend for the fourth time",
+              quote:
+                "I know this pattern has worn you down. I have been dealing with something I was not ready to name. A gift is on its way as a promise not a patch.",
+            },
+            {
+              tag: "Anniversary Disaster",
+              title: "I showed up to our anniversary dinner an hour late",
+              quote:
+                "I was collecting the surprise I arranged for tonight which went catastrophically wrong. What arrives tomorrow will explain everything.",
+            },
+          ].map((card) => (
             <div
-              key={g.name}
+              key={card.tag}
               style={{
-                flex: "0 0 260px",
-                scrollSnapAlign: "start",
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.radiusLg,
-                padding: 24,
-                transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                padding: 48,
+                background: "#0E0C08",
+                border: "1px solid transparent",
+                position: "relative",
+                overflow: "hidden",
+                transition: "border-color 0.35s, background 0.35s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-6px)";
-                e.currentTarget.style.boxShadow = T.shadowMd;
+                e.currentTarget.style.borderColor =
+                  "rgba(201,168,76,0.15)";
+                e.currentTarget.style.background = "#0f0d09";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.borderColor = "transparent";
+                e.currentTarget.style.background = "#0E0C08";
               }}
             >
               <div
                 style={{
-                  height: 100,
-                  background: `linear-gradient(145deg, ${T.surface2}, #0a0906)`,
-                  borderRadius: T.radiusSm,
-                  marginBottom: 16,
-                  border: `1px solid ${T.border}`,
-                }}
-              />
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: 15,
-                  color: T.parchment,
-                  fontFamily: T.fontBody,
-                  marginBottom: 6,
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.2em",
+                  color: "#B8312F",
+                  marginBottom: 20,
                 }}
               >
-                {g.name}
+                {card.tag}
               </div>
-              <div style={{ fontSize: 12, color: T.parchmentDim }}>{g.hint}</div>
+              <h3
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: "italic",
+                  fontSize: 22,
+                  color: "var(--parchment)",
+                  lineHeight: 1.3,
+                  margin: "0 0 24px",
+                }}
+              >
+                {card.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.8,
+                  fontStyle: "italic",
+                  borderLeft: "2px solid rgba(201,168,76,0.3)",
+                  paddingLeft: 16,
+                  color: "var(--parchment-dim)",
+                  margin: 0,
+                }}
+              >
+                {card.quote}
+              </p>
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 32,
+                  right: 32,
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  border: "1px solid rgba(201,168,76,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                }}
+              >
+                ⚔
+              </div>
             </div>
           ))}
         </div>
       </section>
-
-      {/* Web3 tier */}
-      {web3On && (
-        <section
-          style={{
-            padding: "100px 28px",
-            background: "linear-gradient(180deg, #0a0806, #120a0c)",
-            borderTop: `1px solid ${T.border}`,
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 720,
-              margin: "0 auto",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-block",
-                padding: "6px 14px",
-                border: `1px solid ${T.goldBorder}`,
-                borderRadius: T.radiusFull,
-                fontSize: 10,
-                letterSpacing: "0.2em",
-                color: T.gold,
-                marginBottom: 16,
-              }}
-            >
-              ON-CHAIN PROOF (VISUAL)
-            </div>
-            <h2
-              style={{
-                fontFamily: T.fontDisplay,
-                fontStyle: "italic",
-                fontSize: 34,
-                color: T.parchment,
-                margin: "0 0 12px",
-              }}
-            >
-              Knight&apos;s Circle
-            </h2>
-            <p
-              style={{
-                color: T.parchmentDim,
-                fontFamily: T.fontBody,
-                fontSize: 15,
-                lineHeight: 1.7,
-                marginBottom: 28,
-              }}
-            >
-              Mint each alibi as an &quot;proof-of-excuse&quot; NFT. Token-gated:
-              unlimited alibis + priority gift routing.
-            </p>
-            <div
-              style={{
-                display: "flex",
-                gap: 16,
-                justifyContent: "center",
-                flexWrap: "wrap",
-                marginBottom: 32,
-              }}
-            >
-              <div
-                style={{
-                  padding: "20px 24px",
-                  border: `1px solid ${T.border}`,
-                  borderRadius: T.radius,
-                  background: T.surface,
-                  minWidth: 200,
-                  opacity: walletConnected ? 1 : 0.45,
-                }}
-              >
-                <div style={{ fontSize: 10, color: T.parchmentFaint, marginBottom: 8 }}>
-                  STATUS
-                </div>
-                <div style={{ fontFamily: T.fontBody, color: T.parchment }}>
-                  {walletConnected ? "Unlocked — Knight's Circle" : "Locked — connect wallet"}
-                </div>
-              </div>
-            </div>
-            <div
-              style={{
-                textAlign: "left",
-                maxWidth: 560,
-                margin: "0 auto",
-                padding: 16,
-                background: "#0a0a0a",
-                border: `1px solid ${T.border}`,
-                borderRadius: T.radiusSm,
-                fontFamily: "ui-monospace, monospace",
-                fontSize: 11,
-                color: "#8a8a8a",
-                lineHeight: 1.6,
-              }}
-            >
-              <div style={{ color: T.gold, marginBottom: 8 }}>Transaction Receipt</div>
-              Tx Hash: 0x7f3…9a2e
-              <br />
-              To: GiftVault.sol — Flowers + Note
-              <br />
-              Status: Success · Block 18,402,991
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Pricing */}
       <section
         id="pricing"
         style={{
-          padding: "100px 28px",
-          background: T.bg,
+          padding: "120px 48px",
+          background: "#0E0C08",
+          textAlign: "center",
         }}
       >
-        <h2
+        <p
           style={{
-            textAlign: "center",
-            fontFamily: T.fontDisplay,
-            fontStyle: "italic",
-            fontSize: 36,
-            color: T.parchment,
-            marginBottom: 48,
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.25em",
+            color: "var(--gold)",
+            opacity: 0.6,
+            margin: "0 0 16px",
           }}
         >
-          Choose your rank
+          The Tiers of Honour
+        </p>
+        <h2
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontStyle: "italic",
+            fontWeight: 900,
+            fontSize: "clamp(32px, 4vw, 52px)",
+            color: "var(--parchment)",
+            margin: 0,
+          }}
+        >
+          Choose your rank. Own your redemption.
         </h2>
+
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 20,
-            maxWidth: 1000,
-            margin: "0 auto",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 1,
+            background: "rgba(201,168,76,0.08)",
+            marginTop: 64,
           }}
         >
           {[
             {
               name: "Squire",
-              price: "Free",
-              feats: ["3 alibis / mo", "Standard gifts", "Email support"],
+              price: "£0",
+              sub: "/mo",
+              desc: "For the occasional slip-up you need to paper over.",
+              features: [
+                "3 alibis per month",
+                "Standard gift curation",
+                "Email alibi delivery",
+                "Basic alibi styles",
+              ],
+              primary: false,
             },
             {
               name: "Knight",
-              price: "£12/mo",
-              feats: ["Unlimited alibis", "Priority gifts", "SMS nudges"],
-              highlight: true,
+              price: "£12",
+              sub: "/mo",
+              desc: "Full armour. Unlimited excuses. Premium gifts.",
+              features: [
+                "Unlimited alibis",
+                "Premium gift vault access",
+                "Same-day gift dispatch",
+                "Alibi NFT certificate",
+                "Relationship analytics",
+              ],
+              primary: true,
+              badge: "Most Chosen",
             },
             {
               name: "Sir",
-              price: "£29/mo",
-              feats: ["Everything in Knight", "Knight's Circle UI", "Concierge"],
+              price: "£29",
+              sub: "/mo",
+              desc: "White-glove treatment for high-stakes forgiveness.",
+              features: [
+                "Everything in Knight",
+                "Concierge gift selection",
+                "Priority AI processing",
+                "White-glove delivery",
+              ],
+              primary: false,
             },
-          ].map((tier) => (
+          ].map((tier, idx) => (
             <div
               key={tier.name}
               style={{
-                padding: 32,
-                borderRadius: T.radiusLg,
-                border: `1px solid ${tier.highlight ? T.gold : T.border}`,
-                background: tier.highlight
-                  ? "linear-gradient(165deg, rgba(201,168,76,0.08), rgba(14,12,8,0.95))"
-                  : T.surface,
-                boxShadow: tier.highlight ? T.shadowGold : "none",
+                padding: "56px 40px",
+                background: tier.primary ? "#0f0c09" : "#0E0C08",
+                border: tier.primary
+                  ? "1px solid rgba(201,168,76,0.2)"
+                  : "1px solid transparent",
+                position: "relative",
               }}
             >
+              {tier.badge ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -1,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    background: "#C9A84C",
+                    color: "#0E0C08",
+                    fontSize: 10,
+                    letterSpacing: "0.15em",
+                    textTransform: "uppercase",
+                    padding: "4px 16px",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontWeight: 500,
+                  }}
+                >
+                  {tier.badge}
+                </div>
+              ) : null}
               <div
                 style={{
-                  fontFamily: T.fontDisplay,
-                  fontStyle: "italic",
-                  fontSize: 26,
-                  color: T.parchment,
-                  marginBottom: 8,
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.25em",
+                  color: "var(--gold)",
+                  marginBottom: 20,
+                  marginTop: tier.badge ? 12 : 0,
                 }}
               >
                 {tier.name}
               </div>
               <div
                 style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: T.gold,
-                  fontFamily: T.fontBody,
-                  marginBottom: 20,
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontWeight: 900,
+                  fontSize: 56,
+                  color: "var(--parchment)",
+                  lineHeight: 1,
                 }}
               >
                 {tier.price}
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontFamily: "'DM Sans', sans-serif",
+                    color: "var(--parchment-dim)",
+                    fontWeight: 400,
+                  }}
+                >
+                  {tier.sub}
+                </span>
               </div>
-              <ul
+              <p
                 style={{
-                  margin: 0,
-                  paddingLeft: 18,
-                  color: T.parchmentDim,
-                  fontFamily: T.fontBody,
-                  fontSize: 14,
-                  lineHeight: 1.9,
+                  fontSize: 13,
+                  color: "var(--parchment-dim)",
+                  lineHeight: 1.7,
+                  margin: "20px 0 32px",
                 }}
               >
-                {tier.feats.map((f) => (
-                  <li key={f}>{f}</li>
+                {tier.desc}
+              </p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {tier.features.map((f) => (
+                  <li
+                    key={f}
+                    style={{
+                      fontSize: 13,
+                      color: "var(--parchment-dim)",
+                      padding: "8px 0",
+                      borderBottom: "1px solid rgba(201,168,76,0.06)",
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "flex-start",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: "var(--gold)",
+                        opacity: 0.4,
+                        flexShrink: 0,
+                      }}
+                    >
+                      —
+                    </span>
+                    <span>{f}</span>
+                  </li>
                 ))}
               </ul>
-              <div style={{ marginTop: 24 }}>
-                <MagneticButton
-                  primary={!!tier.highlight}
-                  onClick={onSummonKnight}
-                >
-                  {tier.highlight ? "Start Knight" : "Choose"}
-                </MagneticButton>
-              </div>
+              <button
+                type="button"
+                onClick={scrollToConfess}
+                style={{
+                  width: "100%",
+                  marginTop: 40,
+                  padding: tier.primary ? 14 : 12,
+                  background: tier.primary ? "#B8312F" : "transparent",
+                  color: tier.primary
+                    ? "var(--parchment)"
+                    : "var(--gold)",
+                  border: tier.primary
+                    ? "none"
+                    : "1px solid rgba(201,168,76,0.3)",
+                  fontSize: 12,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  fontFamily: "'DM Sans', sans-serif",
+                  cursor: "pointer",
+                  borderRadius: 2,
+                }}
+              >
+                {tier.primary ? "Choose Knight" : `Choose ${tier.name}`}
+              </button>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CTA + footer */}
+      {/* Footer CTA */}
       <section
-        ref={ctaRef}
+        id="vault"
         style={{
+          padding: "160px 48px",
+          textAlign: "center",
           position: "relative",
-          minHeight: "90vh",
-          padding: "80px 28px 48px",
-          background: `radial-gradient(ellipse at 30% 20%, rgba(184,49,47,0.12), transparent 50%), ${T.bg}`,
+          overflow: "hidden",
+          background: "#0E0C08",
         }}
       >
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 32,
-            alignItems: "center",
-            maxWidth: 1100,
-            margin: "0 auto",
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(ellipse 60% 50% at 50% 100%, rgba(184,49,47,0.15), transparent)",
+            pointerEvents: "none",
           }}
-          className="cta-grid"
-        >
-          <div
-            style={{ height: 400, position: "relative" }}
-            onMouseEnter={() => setCtaKnightHover(true)}
-            onMouseLeave={() => setCtaKnightHover(false)}
-          >
-            <KnightScene
-              variant="victory"
-              scrollProgress={1}
-              ctaHover={ctaKnightHover}
-            />
-          </div>
-          <div>
-            <h2
-              className="cta-headline"
-              style={{
-                fontFamily: T.fontDisplay,
-                fontStyle: "italic",
-                fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
-                color: T.parchment,
-                lineHeight: 1.05,
-                margin: "0 0 28px",
-              }}
-            >
-              {"Don't get caught slipping."
-                .split(" ")
-                .map((w) => (
-                  <span
-                    key={w}
-                    className="cta-word"
-                    style={{ display: "block" }}
-                  >
-                    {w}
-                  </span>
-                ))}
-            </h2>
-            <MagneticButton
-              primary
-              onClick={() => {
-                fireConfetti();
-                onSummonKnight();
-              }}
-            >
-              Summon Sir Alibi
-            </MagneticButton>
-          </div>
-        </div>
-
-        <footer
+        />
+        <p
           style={{
-            marginTop: 80,
-            paddingTop: 40,
-            borderTop: `1px solid ${T.border}`,
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-            gap: 24,
-            maxWidth: 1100,
-            marginLeft: "auto",
-            marginRight: "auto",
-            alignItems: "center",
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.25em",
+            color: "var(--gold)",
+            opacity: 0.6,
+            margin: "0 0 24px",
+            position: "relative",
+            zIndex: 1,
           }}
         >
+          The Final Summons
+        </p>
+        <h2
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontStyle: "italic",
+            fontWeight: 900,
+            fontSize: "clamp(64px, 8vw, 120px)",
+            lineHeight: 0.9,
+            marginBottom: 48,
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <div style={{ color: "var(--parchment)" }}>Don&apos;t get caught</div>
           <div
             style={{
-              fontFamily: T.fontDisplay,
-              fontStyle: "italic",
-              fontSize: 22,
-              color: T.parchment,
+              WebkitTextStroke: "1px var(--parchment)",
+              color: "transparent",
             }}
           >
-            Sir Alibi
+            slipping.
           </div>
-          <div style={{ fontSize: 12, color: T.parchmentDim, fontFamily: T.fontBody }}>
-            © {new Date().getFullYear()} Sir Alibi. Not legal advice. Obviously.
-          </div>
-          {userEmail && (
-            <span style={{ fontSize: 12, color: T.parchmentDim }}>{userEmail}</span>
-          )}
-          <div style={{ display: "flex", gap: 12 }}>
-            {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={onLogout}
-                style={{
-                  background: "none",
-                  border: `1px solid ${T.border}`,
-                  color: T.parchmentDim,
-                  padding: "8px 14px",
-                  borderRadius: T.radiusSm,
-                  cursor: "pointer",
-                  fontFamily: T.fontBody,
-                  fontSize: 12,
-                }}
-              >
-                Sign out
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onLogin}
-                style={{
-                  background: T.goldLight,
-                  border: `1px solid ${T.goldBorder}`,
-                  color: T.gold,
-                  padding: "8px 14px",
-                  borderRadius: T.radiusSm,
-                  cursor: "pointer",
-                  fontFamily: T.fontBody,
-                  fontSize: 12,
-                }}
-              >
-                Sign in
-              </button>
-            )}
-          </div>
-        </footer>
+        </h2>
+        <MagneticButton
+          onClick={scrollToConfess}
+          style={{
+            ...primaryBtn,
+            padding: "18px 48px",
+            fontSize: 15,
+            letterSpacing: "0.12em",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          Summon Sir Alibi
+        </MagneticButton>
       </section>
-      <style>{`
-        @media (max-width: 899px) {
-          .hero-section {
-            grid-template-columns: 1fr !important;
-            padding-top: 88px !important;
-          }
-          .cta-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+
+      {/* Footer */}
+      <footer
+        style={{
+          padding: "40px 48px",
+          borderTop: "1px solid rgba(201,168,76,0.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "#0E0C08",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontStyle: "italic",
+            fontSize: 18,
+            color: "var(--gold-dim)",
+          }}
+        >
+          Sir Alibi
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 24,
+            alignItems: "center",
+          }}
+        >
+          {["Privacy", "Terms", "Gift Policy", "Careers"].map((label) => (
+            <a
+              key={label}
+              href="#"
+              style={{
+                fontSize: 12,
+                letterSpacing: "0.08em",
+                color: "var(--parchment-dim)",
+                opacity: 0.5,
+                textDecoration: "none",
+              }}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(242,233,216,0.15)" }}>
+          ⚔ MMXXIV
+        </div>
+      </footer>
     </div>
   );
 }
