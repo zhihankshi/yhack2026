@@ -28,3 +28,17 @@ export function shouldPauseForUserInput(state: RepairState): boolean {
   const t = inferIncidentTypeFromInput(state.input);
   return isHighStakesIncidentType(t);
 }
+
+/**
+ * Pause before reason/write when research heuristics fire OR perception asks clarifiers
+ * with high stakes (or low confidence in stakes when reason not run yet).
+ */
+export function shouldPausePipeline(state: RepairState): boolean {
+  if (shouldPauseForUserInput(state)) return true;
+  const cq = state.perception?.clarifyingQuestions ?? [];
+  if (cq.length === 0) return false;
+  if (state.reasoning !== undefined) {
+    return state.reasoning.severity === "high";
+  }
+  return (state.perception?.confidence?.stakes ?? 1) < 0.6;
+}

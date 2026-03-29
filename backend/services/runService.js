@@ -70,9 +70,8 @@ function mapRunAgentContractToUi(raw, input) {
       apology: {
         subject: w?.subject || "Message",
         body: w?.apologyMessage || "",
-        ps_line: w?.followUpMessage
-          ? w.followUpMessage.trim()
-          : "",
+        // Follow-up copy lives in `followup` only — do not duplicate it here or Gmail drafts repeat it.
+        ps_line: "",
       },
       gift: primaryGift
         ? {

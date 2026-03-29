@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getModelConfigSummary } from "./config.js";
+import type { PerceptionContext } from "./perceptionContext.js";
 import { RunAgentResponseSchema } from "./runAgentContract.js";
 import { runAlibiAgent } from "./runAlibiAgent.js";
 
@@ -30,6 +31,21 @@ const TEST_CASES: { slug: string; input: string }[] = [
   { slug: "move-bailed", input: "Promised to help move apartments but bailed last minute citing work." },
 ];
 
+const PERCEPTION_RICH: PerceptionContext = {
+  gmail: {
+    to: "sarah@company.com",
+    lastContactDaysAgo: 9,
+    oweReply: true,
+    subjectKeywords: ["birthday"],
+  },
+  calendar: { nextFreeWindowISO: "2026-03-29T14:30:00Z" },
+  userProvided: {
+    locationCity: "New Haven",
+    deliveryUrgency: "today",
+    budgetMax: 40,
+  },
+};
+
 function printRuntimeModelConfig() {
   const c = getModelConfigSummary();
   console.log("LLM config (from env / defaults):");
@@ -40,6 +56,7 @@ function printRuntimeModelConfig() {
   console.log(
     `  MODEL_WRITE: ${c.modelWrite} | max_tokens: ${c.maxTokensWrite}`
   );
+  console.log(`  MAX_TOKENS_PERCEPTION: ${c.maxTokensPerception}`);
   console.log(`  TEMPERATURE (all steps): ${c.temperature}`);
 }
 
@@ -80,6 +97,24 @@ async function main() {
   console.log(
     "\nAll cases: RunAgentResponseSchema.parse succeeded. Compare ./agent/__snapshots__/*.json after refactors."
   );
+
+  const perceptionInput =
+    "Forgot my coworker Sarah's birthday; need a thoughtful repair message and gift idea.";
+  for (const { slug, ctx } of [
+    { slug: "perception-with-context", ctx: PERCEPTION_RICH },
+    { slug: "perception-no-context", ctx: undefined as PerceptionContext | undefined },
+  ]) {
+    console.log("\n" + "=".repeat(60));
+    console.log(`Perception test [${slug}]`);
+    console.log("-".repeat(60));
+    const out = await runAlibiAgent(perceptionInput, ctx);
+    RunAgentResponseSchema.parse(out);
+    writeSnapshot(slug, out);
+    console.log(
+      `telemetry: status=${out.status} followUpDays=${out.research.followUpWindowDays} giftLinks=${out.actions.giftLinks.length}`
+    );
+    console.log("RunAgentResponseSchema.parse: OK");
+  }
 }
 
 main();

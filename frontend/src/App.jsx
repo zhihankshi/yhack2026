@@ -1607,14 +1607,35 @@ function AppCore({ auth }) {
       const apiUrl =
         (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
         "http://localhost:3001";
-      await fetch(`${apiUrl}/api/send-apology-email`, {
+      const ps = result.apology.ps_line?.trim();
+      const fu = result.followup?.followup_message?.trim();
+      const includePs =
+        ps &&
+        ps !== fu &&
+        !(fu && (fu.includes(ps) || ps.includes(fu)));
+      const draftBody = [result.apology.body, includePs ? ps : ""]
+        .filter(Boolean)
+        .join("\n\n");
+
+      const emailRes = await fetch(`${apiUrl}/api/send-apology-email`, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          failure_id: failureId,
-          apology: result.apology,
+          subject: result.apology.subject,
+          body: draftBody,
         }),
       });
+      const emailJson = await emailRes.json().catch(() => ({}));
+      if (emailRes.status === 401 && emailJson.error === "NOT_AUTHENTICATED") {
+        showToast(
+          `Connect Google first: open ${apiUrl}/api/auth/google/start`,
+          "warning",
+        );
+        return;
+      }
+      if (!emailRes.ok) {
+        throw new Error(emailJson.error || "draft failed");
+      }
       actD("email");
       showToast("Email drafted in Gmail!", "success");
     } catch {

@@ -3,6 +3,7 @@ import { writeDemoSuffix } from "../demoMode.js";
 import { callLLMJson } from "../llmJson.js";
 import { writeOutSchema, type WriteOut } from "../schemas.js";
 import type { RepairState } from "../state.js";
+import { formatPerceptionBlock } from "./perception.js";
 
 const SYSTEM = `You write the actual messages to send: apologyMessage and followUpMessage, plus optional optionalLightFraming.
 
@@ -20,7 +21,8 @@ export async function writeStep(state: RepairState): Promise<RepairState> {
     throw new Error("writeStep requires state.research and state.reasoning");
   }
 
-  const user = `Scenario:\n${state.input}\n\nResearch:\n${JSON.stringify(state.research, null, 2)}\n\nReasoning:\n${JSON.stringify(state.reasoning, null, 2)}\n\nWrite messages JSON. Follow alibiPolicy=${state.reasoning.alibiPolicy} strictly.`;
+  const perceptionSection = formatPerceptionBlock(state);
+  const user = `Scenario:\n${state.input}\n\n${perceptionSection ? `${perceptionSection}\n\n` : ""}Research:\n${JSON.stringify(state.research, null, 2)}\n\nReasoning:\n${JSON.stringify(state.reasoning, null, 2)}\n\nWrite messages JSON. Follow alibiPolicy=${state.reasoning.alibiPolicy} strictly. Do not claim you read their email/calendar unless integration metadata was provided in perception.`;
 
   const writing: WriteOut = await callLLMJson(
     writeOutSchema,

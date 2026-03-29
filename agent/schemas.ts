@@ -51,8 +51,27 @@ export const writeOutSchema = z.object({
   optionalLightFraming: z.string().optional(),
 });
 
+export const perceptionOutSchema = z.object({
+  situationSummary: z.string(),
+  signals: z.array(z.string()),
+  confidence: z.object({
+    relationship: z.number(),
+    stakes: z.number(),
+    tone: z.number(),
+  }),
+  assumptions: z.array(z.string()),
+  missingInfo: z.array(z.string()),
+  clarifyingQuestions: z.array(z.string()).max(2),
+  constraints: z.object({
+    hrSafe: z.boolean(),
+    urgencyHours: z.number(),
+    budgetMax: z.number().optional(),
+  }),
+});
+
 export type IncidentType = z.infer<typeof incidentTypeSchema>;
 export type AlibiPolicy = z.infer<typeof alibiPolicySchema>;
 export type ResearchOut = z.infer<typeof researchOutSchema>;
 export type ReasonOut = z.infer<typeof reasonOutSchema>;
 export type WriteOut = z.infer<typeof writeOutSchema>;
+export type PerceptionOut = z.infer<typeof perceptionOutSchema>;

@@ -1,14 +1,17 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
-const googleRoutes = require("./routes/googleRoutes");
+const cookieParser = require("cookie-parser");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
+const googleRoutes = require("./routes/googleRoutes");
 const agentRoutes = require("./routes/agentRoutes");
 const integrationRoutes = require("./routes/integrationRoutes");
 
 const app = express();
 
 app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
 
 app.get("/", (req, res) => {
