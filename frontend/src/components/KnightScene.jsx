@@ -5,7 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 const GOLD = 0xc9a84c;
 const CRIMSON = 0x8a2826;
 
-const MODEL_URL = `${import.meta.env.BASE_URL}knight_helmet.glb`;
+const MODEL_URL = `${import.meta.env.BASE_URL}rogue_legacy_knight.glb`;
 
 function disposeObject3D(obj) {
   obj.traverse((child) => {
@@ -19,7 +19,7 @@ function disposeObject3D(obj) {
 }
 
 /**
- * GLB helmet (knight_helmet.glb). Rim gold / crimson fill; dust; Y-spin on hover.
+ * GLB model (rogue_legacy_knight.glb). Rim gold / crimson fill; dust; Y-spin on hover.
  */
 export function KnightScene({
   variant = "hero",
@@ -148,7 +148,7 @@ export function KnightScene({
       },
       undefined,
       (err) => {
-        console.error("[KnightScene] Failed to load knight_helmet.glb", err);
+        console.error("[KnightScene] Failed to load rogue_legacy_knight.glb", err);
       },
     );
 
