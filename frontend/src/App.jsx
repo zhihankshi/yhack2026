@@ -776,7 +776,22 @@ function GiftCard({ gift, onSendGift, giftLoading, giftDone }) {
         </div>
         {gift?.purchase_link && (
           <a
-            href={gift.purchase_link}
+            href={
+              !gift.purchase_link ||
+              gift.purchase_link.includes("placeholder") ||
+              gift.purchase_link.includes("drinktrade") ||
+              gift.purchase_link.includes("amazon.com/dp") ||
+              gift.purchase_link === "#"
+                ? gift.price_range?.includes("100") ||
+                  gift.price_range?.includes("200")
+                  ? "https://www.etsy.com/search?q=luxury+premium+gift+set"
+                  : gift.price_range?.includes("50") ||
+                      gift.price_range?.includes("60") ||
+                      gift.price_range?.includes("48")
+                    ? "https://www.etsy.com/search?q=thoughtful+apology+gift+set"
+                    : "https://www.etsy.com/search?q=apology+gift+under+30"
+                : gift.purchase_link
+            }
             target="_blank"
             rel="noopener noreferrer"
             style={{
