@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
+const googleRoutes = require("./routes/googleRoutes");
 
 const agentRoutes = require("./routes/agentRoutes");
 const integrationRoutes = require("./routes/integrationRoutes");
@@ -23,6 +24,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api", agentRoutes);
 app.use("/api", integrationRoutes);
+app.use("/api", googleRoutes);
 
 const PORT = process.env.PORT || 3001;
 
