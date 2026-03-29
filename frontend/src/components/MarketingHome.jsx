@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { T } from "../lib/tokens.js";
 import KnightHero from "./KnightHero.jsx";
 
 const HERO_TICKER = [
@@ -16,32 +15,6 @@ const SOCIAL_TICKER = [
   "Like having a lawyer and a florist on speed dial — TechCrunch",
   "Genuinely unhinged. I love it. — @devonclark_",
   "My mum thinks I am thoughtful now — App Store ★★★★★",
-];
-
-const RELATIONSHIP_OPTIONS = [
-  { value: "close friend", label: "Close Friend" },
-  { value: "coworker", label: "Coworker" },
-  { value: "family", label: "Family" },
-  { value: "romantic partner", label: "Romantic Partner" },
-];
-const FAILURE_OPTIONS = [
-  { value: "forgot their birthday", label: "Forgot their birthday" },
-  { value: "missed an important meeting", label: "Missed a meeting" },
-  { value: "flaked on plans", label: "Flaked on plans" },
-  { value: "forgot an anniversary", label: "Forgot an anniversary" },
-  { value: "ignored messages", label: "Went MIA" },
-  { value: "other", label: "Other…" },
-];
-const BUDGET_OPTIONS = [
-  { value: "under_20", label: "Under $20" },
-  { value: "20_50", label: "$20 – $50" },
-  { value: "50_100", label: "$50 – $100" },
-  { value: "100_plus", label: "$100+" },
-];
-const MEDIUM_OPTIONS = [
-  { value: "text", label: "Text message" },
-  { value: "email", label: "Email" },
-  { value: "verbal", label: "In person" },
 ];
 
 function MagneticButton({ children, onClick, style, type = "button" }) {
@@ -74,312 +47,6 @@ function MagneticButton({ children, onClick, style, type = "button" }) {
     >
       {children}
     </button>
-  );
-}
-
-function Spinner({ size = 16, color = T.gold }) {
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        width: size,
-        height: size,
-        flexShrink: 0,
-        border: `2px solid ${color}28`,
-        borderTopColor: color,
-        borderRadius: "50%",
-        animation: "mh-spin 0.7s linear infinite",
-      }}
-    />
-  );
-}
-
-function MarketingConfessionForm({ onSubmit, onDemo, onContextInput }) {
-  const [form, setForm] = useState({
-    name: "",
-    relationship: "close friend",
-    failure_type: "forgot their birthday",
-    custom_failure: "",
-    time_elapsed: "just happened",
-    prior_failures: false,
-    budget: "20_50",
-    medium: "text",
-    additional_context: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  const canSubmit =
-    form.name.trim() &&
-    (form.failure_type !== "other" || form.custom_failure.trim());
-
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
-    setLoading(true);
-    await onSubmit({
-      ...form,
-      failure_type:
-        form.failure_type === "other" ? form.custom_failure : form.failure_type,
-    });
-    setLoading(false);
-  };
-
-  const field = {
-    width: "100%",
-    background: "rgba(0,0,0,0.35)",
-    border: `1px solid ${T.border}`,
-    borderRadius: T.radiusSm,
-    padding: "10px 13px",
-    color: T.parchment,
-    fontSize: 13,
-    fontWeight: 400,
-    fontFamily: T.fontBody,
-    outline: "none",
-    transition: "border-color 0.2s ease",
-  };
-
-  const lbl = (text) => (
-    <label
-      style={{
-        display: "block",
-        fontSize: 9,
-        fontWeight: 600,
-        color: T.parchmentFaint,
-        letterSpacing: "2px",
-        textTransform: "uppercase",
-        marginBottom: 6,
-        fontFamily: T.fontBody,
-      }}
-    >
-      {text}
-    </label>
-  );
-
-  return (
-    <div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 14,
-          marginBottom: 14,
-        }}
-      >
-        <div>
-          {lbl("Their Name")}
-          <input
-            style={field}
-            placeholder="Sarah…"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.gold)}
-            onBlur={(e) => (e.target.style.borderColor = T.border)}
-          />
-        </div>
-        <div>
-          {lbl("Relationship")}
-          <select
-            style={field}
-            value={form.relationship}
-            onChange={(e) => set("relationship", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.gold)}
-            onBlur={(e) => (e.target.style.borderColor = T.border)}
-          >
-            {RELATIONSHIP_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        {lbl("What did you do")}
-        <select
-          style={field}
-          value={form.failure_type}
-          onChange={(e) => set("failure_type", e.target.value)}
-          onFocus={(e) => (e.target.style.borderColor = T.gold)}
-          onBlur={(e) => (e.target.style.borderColor = T.border)}
-        >
-          {FAILURE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {form.failure_type === "other" && (
-        <div style={{ marginBottom: 14 }}>
-          {lbl("Describe what happened")}
-          <input
-            style={field}
-            placeholder="I forgot to…"
-            value={form.custom_failure}
-            onChange={(e) => set("custom_failure", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.gold)}
-            onBlur={(e) => (e.target.style.borderColor = T.border)}
-          />
-        </div>
-      )}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gap: 14,
-          marginBottom: 14,
-        }}
-      >
-        <div>
-          {lbl("How long ago")}
-          <select
-            style={field}
-            value={form.time_elapsed}
-            onChange={(e) => set("time_elapsed", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.gold)}
-            onBlur={(e) => (e.target.style.borderColor = T.border)}
-          >
-            {[
-              "just happened",
-              "yesterday",
-              "3 days ago",
-              "a week ago",
-              "a month ago",
-            ].map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          {lbl("Budget")}
-          <select
-            style={field}
-            value={form.budget}
-            onChange={(e) => set("budget", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.gold)}
-            onBlur={(e) => (e.target.style.borderColor = T.border)}
-          >
-            {BUDGET_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          {lbl("Medium")}
-          <select
-            style={field}
-            value={form.medium}
-            onChange={(e) => set("medium", e.target.value)}
-            onFocus={(e) => (e.target.style.borderColor = T.gold)}
-            onBlur={(e) => (e.target.style.borderColor = T.border)}
-          >
-            {MEDIUM_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        {lbl("Anything the agent should know")}
-        <textarea
-          style={{ ...field, height: 80, resize: "vertical" }}
-          placeholder="She's been stressed with deadlines lately, we've been friends 10 years…"
-          value={form.additional_context}
-          onChange={(e) => set("additional_context", e.target.value)}
-          onInput={(e) => onContextInput?.(e.target.value)}
-          onFocus={(e) => (e.target.style.borderColor = T.gold)}
-          onBlur={(e) => (e.target.style.borderColor = T.border)}
-        />
-      </div>
-
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginBottom: 26,
-          cursor: "pointer",
-          fontSize: 12,
-          fontWeight: 400,
-          color: T.parchmentDim,
-          fontFamily: T.fontBody,
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={form.prior_failures}
-          onChange={(e) => set("prior_failures", e.target.checked)}
-          style={{ accentColor: T.gold, width: 15, height: 15, flexShrink: 0 }}
-        />
-        I&apos;ve let this person down before
-      </label>
-
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={loading || !canSubmit}
-        style={{
-          width: "100%",
-          padding: "14px",
-          background:
-            loading || !canSubmit
-              ? "rgba(201,168,76,0.08)"
-              : "linear-gradient(90deg, #B8312F, #C9A84C, #B8312F)",
-          backgroundSize: "200% auto",
-          animation:
-            loading || !canSubmit ? "none" : "mh-gradientShift 3s ease infinite",
-          border: `1px solid ${loading || !canSubmit ? T.goldBorder : "transparent"}`,
-          borderRadius: T.radius,
-          color: loading || !canSubmit ? T.gold : "#0E0C08",
-          fontSize: 15,
-          fontWeight: 700,
-          fontFamily: T.fontBody,
-          cursor: loading || !canSubmit ? "not-allowed" : "pointer",
-          transition: "opacity 0.18s ease",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-        }}
-      >
-        {loading ? (
-          <>
-            <Spinner size={15} color={T.gold} /> Running agent…
-          </>
-        ) : (
-          "Build My Alibi →"
-        )}
-      </button>
-
-      <div style={{ textAlign: "center", marginTop: 12 }}>
-        <button
-          type="button"
-          onClick={onDemo}
-          style={{
-            background: "none",
-            border: "none",
-            color: T.parchmentFaint,
-            fontSize: 11,
-            fontWeight: 500,
-            cursor: "pointer",
-            textDecoration: "underline",
-            textDecorationStyle: "dotted",
-            fontFamily: T.fontBody,
-          }}
-        >
-          or run with demo data (Sarah&apos;s birthday) →
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -438,17 +105,6 @@ export function MarketingHome({
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-
-@keyframes mh-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes mh-gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 `;
     document.head.appendChild(el);
     return () => {
@@ -484,12 +140,6 @@ export function MarketingHome({
       document.documentElement.style.scrollBehavior = prev;
     };
   }, []);
-
-  const scrollToConfess = () => {
-    document
-      .getElementById("confess-section")
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
 
   const navLink = {
     fontSize: 12,
@@ -624,7 +274,7 @@ export function MarketingHome({
           <button type="button" style={ghostBtn}>
             Connect Wallet
           </button>
-          <MagneticButton onClick={scrollToConfess} style={primaryBtn}>
+          <MagneticButton onClick={onSummonKnight} style={primaryBtn}>
             Summon Knight
           </MagneticButton>
           {isAuthenticated ? (
@@ -882,7 +532,7 @@ export function MarketingHome({
 
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
             <MagneticButton
-              onClick={scrollToConfess}
+              onClick={onSummonKnight}
               style={{
                 ...primaryBtn,
                 padding: "14px 32px",
@@ -986,66 +636,6 @@ export function MarketingHome({
               </span>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Section 3 — confession form (inline) */}
-      <section
-        id="confess-section"
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          padding: "80px 5% 80px 0",
-          background: "transparent",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            width: 480,
-            maxWidth: "100%",
-            background: "rgba(14,12,8,0.88)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(201,168,76,0.15)",
-            borderRadius: 8,
-            padding: 32,
-          }}
-        >
-          <div style={{ marginBottom: 30 }}>
-            <h2
-              style={{
-                fontSize: 36,
-                fontWeight: 700,
-                fontStyle: "italic",
-                color: "var(--parchment)",
-                marginBottom: 8,
-                letterSpacing: "-0.5px",
-                fontFamily: "'Cormorant Garamond', serif",
-              }}
-            >
-              Confess your crime.
-            </h2>
-            <p
-              style={{
-                fontSize: 13,
-                fontWeight: 400,
-                color: "var(--parchment-dim)",
-                lineHeight: 1.65,
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
-              Tell the agent what happened. It handles everything else —
-              autonomously.
-            </p>
-          </div>
-          <MarketingConfessionForm
-            onSubmit={onSummonKnight}
-            onDemo={onDemo}
-            onContextInput={onContextInput}
-          />
         </div>
       </section>
 
@@ -1574,7 +1164,7 @@ export function MarketingHome({
               </ul>
               <button
                 type="button"
-                onClick={scrollToConfess}
+                onClick={onSummonKnight}
                 style={{
                   width: "100%",
                   marginTop: 40,
@@ -1658,7 +1248,7 @@ export function MarketingHome({
           </div>
         </h2>
         <MagneticButton
-          onClick={scrollToConfess}
+          onClick={onSummonKnight}
           style={{
             ...primaryBtn,
             padding: "18px 48px",
