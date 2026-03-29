@@ -1429,7 +1429,7 @@ function AppCore({ auth }) {
 
   const finalizeRunningSteps = useCallback(() => {
     setCompletedStepKeys((c) =>
-      runningStepRef.current ? [...c, runningStepRef.current] : c
+      runningStepRef.current ? [...c, runningStepRef.current] : c,
     );
     runningStepRef.current = null;
     setCurrentStep(null);
@@ -1454,7 +1454,10 @@ function AppCore({ auth }) {
     if (keys.length === 0) return;
     applyAgentStep(keys[0]);
     for (let i = 1; i < keys.length; i++) {
-      const id = setTimeout(() => applyAgentStep(keys[i]), FAKE_STEP_DWELL_MS * i);
+      const id = setTimeout(
+        () => applyAgentStep(keys[i]),
+        FAKE_STEP_DWELL_MS * i,
+      );
       fakeRunTimersRef.current.push(id);
     }
   }, [applyAgentStep, clearFakeRunTimers]);
@@ -1472,21 +1475,23 @@ function AppCore({ auth }) {
     const keys = Object.keys(STEPS_META);
     applyAgentStep(keys[0]);
     for (let i = 1; i < keys.length; i++) {
-      const id = setTimeout(() => applyAgentStep(keys[i]), FAKE_STEP_DWELL_MS * i);
+      const id = setTimeout(
+        () => applyAgentStep(keys[i]),
+        FAKE_STEP_DWELL_MS * i,
+      );
       fakeRunTimersRef.current.push(id);
     }
-    const doneId = setTimeout(() => {
-      finalizeRunningSteps();
-      setResult(GOLDEN_PATH_RESULT);
-      setFailureId("demo-run-001");
-      setPhase("result");
-    }, FAKE_STEP_DWELL_MS * (keys.length - 1) + DEMO_FINAL_HOLD_MS);
+    const doneId = setTimeout(
+      () => {
+        finalizeRunningSteps();
+        setResult(GOLDEN_PATH_RESULT);
+        setFailureId("demo-run-001");
+        setPhase("result");
+      },
+      FAKE_STEP_DWELL_MS * (keys.length - 1) + DEMO_FINAL_HOLD_MS,
+    );
     fakeRunTimersRef.current.push(doneId);
-  }, [
-    applyAgentStep,
-    finalizeRunningSteps,
-    clearFakeRunTimers,
-  ]);
+  }, [applyAgentStep, finalizeRunningSteps, clearFakeRunTimers]);
 
   // ── Real submit ────────────────────────────────────────────────────────────
   async function submitForm(formData) {
@@ -1649,10 +1654,12 @@ function AppCore({ auth }) {
         const t = await getAccessTokenSilently();
         if (t) headers["Authorization"] = `Bearer ${t}`;
       } catch {}
+
       const apiUrl =
         (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
         "http://localhost:3001";
-      await fetch(`${apiUrl}/api/schedule-followup`, {
+
+      const res = await fetch(`${apiUrl}/api/schedule-followup`, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -1661,6 +1668,19 @@ function AppCore({ auth }) {
           person_name: result.research?.name,
         }),
       });
+
+      if (res.status === 401) {
+        window.location.href = `${apiUrl}/api/google/auth`;
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Calendar request failed: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log("calendar response:", data);
+
       actD("followup");
       showToast("Follow-up added to calendar!", "success");
     } catch {
