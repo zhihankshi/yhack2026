@@ -14,7 +14,8 @@ function getGoogleAuthUrl() {
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
-    scope: ["https://www.googleapis.com/auth/calendar.events"],
+    include_granted_scopes: false,
+    scope: [process.env.GOOGLE_CALENDAR_SCOPE],
   });
 }
 

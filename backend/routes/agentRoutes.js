@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { runAgent } = require("../controllers/agentController");
+const { runAgent, createPlaylist } = require("../controllers/agentController");
 
 router.post("/run-agent", runAgent);
+router.post("/create-playlist", createPlaylist);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const { runAlibiAgent } = require("../services/runService");
+const { createPersonalizedPlaylist } = require("../spotify");
 
 async function runAgent(req, res) {
   try {
@@ -51,4 +52,33 @@ async function runAgent(req, res) {
   }
 }
 
-module.exports = { runAgent };
+async function createPlaylist(req, res) {
+  try {
+    const { victimName, relationship, failureType, additionalContext } =
+      req.body || {};
+
+    if (!victimName || !relationship || !failureType) {
+      return res.status(400).json({
+        ok: false,
+        error: "Missing required playlist fields",
+      });
+    }
+
+    const playlist = await createPersonalizedPlaylist({
+      victimName,
+      relationship,
+      failureType,
+      additionalContext,
+    });
+
+    return res.json(playlist);
+  } catch (error) {
+    console.error("createPlaylist error:", error);
+    return res.status(500).json({
+      ok: false,
+      error: error.message || "Failed to create playlist",
+    });
+  }
+}
+
+module.exports = { runAgent, createPlaylist };

@@ -7,6 +7,8 @@ import { MarketingHome } from "./components/MarketingHome.jsx";
 import KnightScene from "./components/KnightScene.jsx";
 import GeneratingOverlay from "./components/GeneratingOverlay.jsx";
 import { LoadingCrest } from "./components/LoadingCrest.jsx";
+import { Spinner } from "./components/Spinner.jsx";
+import SpotifyCard from "./components/SpotifyCard.jsx";
 
 // ─── Agent Steps Metadata ─────────────────────────────────────────────────────
 const STEPS_META = {
@@ -164,23 +166,6 @@ async function copyText(text) {
 }
 
 // ─── Micro-components ─────────────────────────────────────────────────────────
-function Spinner({ size = 16, color = T.gold }) {
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        width: size,
-        height: size,
-        flexShrink: 0,
-        border: `2px solid ${color}28`,
-        borderTopColor: color,
-        borderRadius: "50%",
-        animation: "spin 0.7s linear infinite",
-      }}
-    />
-  );
-}
-
 function PulsingDot({ color = T.gold }) {
   return (
     <span
@@ -1340,6 +1325,7 @@ function AppCore({ auth }) {
   const [actionDone, setActionDone] = useState({});
   const [currentCrimeLevel, setCurrentCrimeLevel] = useState("minor");
   const [submittedForm, setSubmittedForm] = useState(null);
+  const [currentFormData, setCurrentFormData] = useState(null);
 
   const handleContextInput = useCallback((value) => {
     const lower = value.toLowerCase();
@@ -1501,6 +1487,12 @@ function AppCore({ auth }) {
 
   // ── Demo run ───────────────────────────────────────────────────────────────
   const runDemo = useCallback(() => {
+    setCurrentFormData({
+      name: "Sarah",
+      relationship: "close friend",
+      failure_type: "forgot their birthday",
+      additional_context: "",
+    });
     setPhase("running");
     clearFakeRunTimers();
     runningStepRef.current = null;
@@ -1531,6 +1523,7 @@ function AppCore({ auth }) {
 
   async function submitForm(formData) {
       setSubmittedForm(formData);
+      setCurrentFormData(formData);
       const headers = { "Content-Type": "application/json" };
       try {
         const token = await getAccessTokenSilently();
@@ -2064,6 +2057,17 @@ function AppCore({ auth }) {
                      onSendGift={failureId !== "demo-run-001" ? sendGift : null}
                      giftLoading={actionLoading.gift}
                      giftDone={actionDone.gift}
+                  />
+                </HoverCard>
+              )}
+              {result.gift && (
+                <HoverCard delay="0.40s">
+                  <SpotifyCard
+                    victimName={result.research?.name || "them"}
+                    relationship={currentFormData?.relationship}
+                    failureType={currentFormData?.failure_type}
+                    additionalContext={currentFormData?.additional_context}
+                    apiUrl={import.meta.env.VITE_API_URL || "http://localhost:3001"}
                   />
                 </HoverCard>
               )}

@@ -6,7 +6,7 @@ let storedCredentials = null;
 const GOOGLE_ENV_KEYS = [
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
-  "GOOGLE_REDIRECT_URI",
+  "GOOGLE_GMAIL_REDIRECT_URI",
 ];
 
 /** Trim and strip accidental wrapping quotes from .env lines. */
@@ -30,12 +30,16 @@ function assertGoogleEnv() {
   }
 }
 
+function getGmailRedirectUri() {
+  return envClean("GOOGLE_GMAIL_REDIRECT_URI") || envClean("GOOGLE_REDIRECT_URI");
+}
+
 function createOAuth2Client() {
   assertGoogleEnv();
   return new google.auth.OAuth2(
     envClean("GOOGLE_CLIENT_ID"),
     envClean("GOOGLE_CLIENT_SECRET"),
-    envClean("GOOGLE_REDIRECT_URI"),
+    getGmailRedirectUri(),
   );
 }
 
@@ -44,6 +48,7 @@ function generateGoogleAuthUrl() {
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
+    include_granted_scopes: false,
     scope: ["https://www.googleapis.com/auth/gmail.compose"],
   });
 }
@@ -63,7 +68,7 @@ function formatGoogleOAuthError(e) {
 
 async function exchangeCodeForTokens(code) {
   const oauth2Client = createOAuth2Client();
-  const redirectUri = envClean("GOOGLE_REDIRECT_URI");
+  const redirectUri = getGmailRedirectUri();
   const authCode = typeof code === "string" ? code.trim() : code;
   try {
     const { tokens } = await oauth2Client.getToken({

@@ -38,6 +38,7 @@ function mapRunAgentContractToUi(raw, input) {
     failure_id: raw.runId || raw.failure_id || `failure_${Date.now()}`,
     result: {
       research: {
+        name,
         inferred_interests:
           res?.giftIdeas?.map((g) => g.title).filter(Boolean) ?? [],
         communication_style: r
@@ -116,6 +117,7 @@ function normalizeAgentResponse(raw, input) {
     result: {
       research: raw?.research ||
         raw?.result?.research || {
+          name: input.name,
           person_name: input.name,
           relationship: input.relationship,
         },

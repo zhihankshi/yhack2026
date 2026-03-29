@@ -27,6 +27,7 @@ export const GOLDEN_PATH_RESULT = {
   steps: GOLDEN_PATH_STEPS.map(s => ({ type: "tool_call", ...s })),
 
   research: {
+    name: "Sarah",
     inferred_interests: ["specialty coffee", "team lunches", "work-life balance", "thoughtful gestures"],
     communication_style: "professional but warm — values sincerity over grand gestures",
     sensitivity_level: "medium",
